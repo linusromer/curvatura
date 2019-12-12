@@ -29,3 +29,4 @@ If you are working with quadratic bezier splines the tools "Tunnify (balance)" a
 * `harmonize-tunnify-inflection.py` cannot handle quadratic bezier splines, whereas `Curvatura.py` can handle them.
 * Some computations in `Curvatura.py` have been optimized in comparison to `harmonize-tunnify-inflection.py` (e.g. square roots are less frequently)
 * The design of `Curvatura.py` allows the use as a FontForge plugin, as a python class and as a command line program. `harmonize-tunnify-inflection.py` only served as a FontForge plugin. `Curvatura.py` implements additionaly the computation of the curvature at the time `t` of a bezier spline as helping method.
+* `harmonize-tunnify-inflection.py` had no sub menu. The menu entries of `Curvatura.py` are contained in a sub menu called "Curvatura". This makes the tools easier distinctable from tools of other suppliers. 
