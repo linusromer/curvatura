@@ -17,7 +17,7 @@ After installation, FontForge will show in the Tools menu 4 new entries: "Harmon
 
 The last tool ("Add points of inflection") adds points of inflection (FontForge can natively display them but not natively add them):
 
-<img width="420" alt="inflection-all" src="https://user-images.githubusercontent.com/11213578/69477605-826d5b00-0de8-11ea-8baf-bf3b87c4c836.png">
+<img width="420" alt="inflection-all" src="https://user-images.githubusercontent.com/11213578/70742783-9c7ec700-1d1e-11ea-8dcf-9d488496cebc.png">
 
 
 
