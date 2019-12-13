@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Curvatura version 20191207
+# Curvatura version 20191213
 
 # This is a FontForge plug-in to harmonize or tunnify 
 # or add inflection points to the selected parts.
@@ -158,12 +158,11 @@ class Curvatura:
 			# this must be the overovernext point
 			# (which is the only case
 			# that interests us)
-			if (c[j].selected or is_glyph_variant) \
-			and not c[(j+1)%l].on_curve \
-			and not c[(j+2)%l].on_curve \
-			and c[(j+3)%l].on_curve \
-			and (c[(j+3)%l].selected or is_glyph_variant) \
-			and (j+3)%l != j:
+			if (c[j].on_curve and not c[(j+1)%l].on_curve \
+			and not c[(j+2)%l].on_curve and c[(j+3)%l].on_curve) \
+			and (c[j].selected and c[(j+3)%l].selected \
+			or c[(j+2)%l].selected or c[(j+1)%l].selected \
+			or is_glyph_variant) and (j+3)%l != j:
 				t = Curvatura.inflection(c[j].x,c[j].y,c[(j+1)%l].x,c[(j+1)%l].y,
 				c[(j+2)%l].x,c[(j+2)%l].y,c[(j+3)%l].x,c[(j+3)%l].y)
 				if not t is None:
@@ -209,12 +208,11 @@ class Curvatura:
 			# this must be the overovernext point
 			# (which is the only case
 			# that interests us)
-			if (c[j].selected or is_glyph_variant) \
-			and not c[(j+1)%l].on_curve \
-			and not c[(j+2)%l].on_curve \
-			and c[(j+3)%l].on_curve \
-			and (c[(j+3)%l].selected or is_glyph_variant) \
-			and (j+3)%l != j:
+			if (c[j].on_curve and not c[(j+1)%l].on_curve \
+			and not c[(j+2)%l].on_curve and c[(j+3)%l].on_curve) \
+			and (c[j].selected and c[(j+3)%l].selected \
+			or c[(j+2)%l].selected or c[(j+1)%l].selected \
+			or is_glyph_variant) and (j+3)%l != j:
 				c[(j+1)%l].x,c[(j+1)%l].y,c[(j+2)%l].x,c[(j+2)%l].y = \
 				Curvatura.tunnify(c[j].x, c[j].y,	c[(j+1)%l].x, c[(j+1)%l].y, 
 				c[(j+2)%l].x, c[(j+2)%l].y, c[(j+3)%l].x, c[(j+3)%l].y)
