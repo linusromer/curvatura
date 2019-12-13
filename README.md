@@ -1,8 +1,24 @@
 # Curvatura
-A FontForge plug-in to harmonize or tunnify or add inflection points to the selected parts. This is the successor to [harmonize-tunnify-inflection](https://github.com/linusromer/harmonize-tunnify-inflection).
+A FontForge plug-in to harmonize or tunnify or add inflection points to the selected parts. 
+This is the successor to [harmonize-tunnify-inflection](https://github.com/linusromer/harmonize-tunnify-inflection).
 
 ## Prerequisites
-FontForge has to be at least the version from May, 26 2019. On Linux you must have installed Python along with FontForge. On Windows FontForge embeds an own version of Python. Hence, you do not have to install Python additionaly.
+On Linux you must have installed Python along with FontForge. 
+On Windows FontForge embeds an own version of Python. 
+Hence, you do not have to install Python additionaly. 
+FontForge has to be at least the version from May, 26 2019. 
+
+If you are on (X/K)ubuntu 18.04 you may consider a manual update:
+```bash
+sudo add-apt-repository ppa:fontforge/fontforge
+
+sudo apt remove libgdraw5 libfontforge1 fontforge-common fontforge python-fontforge
+
+sudo apt install libgdraw4=20190413-27-g1acfefa-0ubuntu1~bionic libfontforge1=20190413-27-g1acfefa-0ubuntu1~bionic fontforge-common=20190413-27-g1acfefa-0ubuntu1~bionic fontforge=20190413-27-g1acfefa-0ubuntu1~bionic python-fontforge=20190413-27-g1acfefa-0ubuntu1~bionic
+```
+If you are bound to an older version of FontForge, you may try 
+[harmonize-tunnify-inflection](https://github.com/linusromer/harmonize-tunnify-inflection) instead, 
+which should work with older versions of FontForge too.
 
 ## Installation
 According to the documentation of FontForge you have to copy the file Curvatura.py to 
