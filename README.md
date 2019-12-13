@@ -2,7 +2,7 @@
 A FontForge plug-in to harmonize or tunnify or add inflection points to the selected parts. This is the successor to [harmonize-tunnify-inflection](https://github.com/linusromer/harmonize-tunnify-inflection).
 
 ## Prerequisites
-You must have installed Python along with FontForge. FontForge has to be at least the version from May, 26 2019.
+FontForge has to be at least the version from May, 26 2019. On Linux you must have installed Python along with FontForge. On Windows FontForge embeds an own version of Python. Hence, you do not have to install Python additionaly.
 
 ## Installation
 According to the documentation of FontForge you have to copy the file Curvatura.py to 
@@ -32,7 +32,7 @@ If you are working with quadratic bezier splines the tools "Tunnify (balance)" a
 * `harmonize-tunnify-inflection.py` had no sub menu. The menu entries of `Curvatura.py` are contained in a sub menu called "Curvatura". This makes the tools easier distinctable from tools of other suppliers. 
 
 ## Use `Curvatura.py` In Command Line
-You can use `Curvatura.py` in the command line. It needs exactely 2 arguments:
+You can use `Curvatura.py` in the command line. It will harmonize all glyhps in a font and needs exactely 2 arguments:
 ```
 python Curvatura.py input_font_file output_font_file
 ```
