@@ -8,7 +8,7 @@ On Windows FontForge embeds an own version of Python.
 Hence, you do not have to install Python additionaly. 
 FontForge has to be at least the version from May, 26 2019. 
 
-If you are on (X/K)ubuntu 18.04 you may consider a manual update:
+If you are on Ubuntu/Xubuntu/Kubuntu 18.04 you may consider a manual update:
 ```bash
 sudo add-apt-repository ppa:fontforge/fontforge
 
