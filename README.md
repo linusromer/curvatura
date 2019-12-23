@@ -37,12 +37,12 @@ they have been added here for documentation reasons):
 "Set Tunni ratio" will set a constant Tunni ratio for all selected smooth paths. The default ratio 0.55 will make bezier arcs between a horizontal and
 a vertical node to approximately elliptic arcs.
 
-<img width="450" alt="set Tunni ratio" src="https://user-images.githubusercontent.com/11213578/71370881-97880600-25af-11ea-8b6e-97f1e321579c.png">
+<img width="420" alt="set Tunni ratio" src="https://user-images.githubusercontent.com/11213578/71370881-97880600-25af-11ea-8b6e-97f1e321579c.png">
 
 "Set tension" will set the tension as in METAPOST or METAFONT for all selected smooth paths. The algorithm is described in The METAFONTbook by 
 Donald E. Knuth. 
 
-<img width="450" alt="set tension" src="https://user-images.githubusercontent.com/11213578/71370882-97880600-25af-11ea-9aef-f19e8273c222.png">
+<img width="420" alt="set tension" src="https://user-images.githubusercontent.com/11213578/71370882-97880600-25af-11ea-9aef-f19e8273c222.png">
 
 The last tool ("Add points of inflection") adds points of inflection (FontForge can natively display them but not natively add them):
 
