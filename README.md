@@ -39,7 +39,7 @@ a vertical node to approximately elliptic arcs.
 
 <img width="420" alt="set Tunni ratio" src="https://user-images.githubusercontent.com/11213578/71370881-97880600-25af-11ea-8b6e-97f1e321579c.png">
 
-"Set tension" will set the tension as in METAPOST or METAFONT for all selected smooth paths. The algorithm is described in The METAFONTbook by 
+"Set tension" will set the tension as in METAPOST/METAFONT for all selected smooth paths. The algorithm is described in The METAFONTbook by 
 Donald E. Knuth. 
 
 <img width="420" alt="set tension" src="https://user-images.githubusercontent.com/11213578/71370882-97880600-25af-11ea-9aef-f19e8273c222.png">
