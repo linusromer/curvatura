@@ -27,9 +27,22 @@ According to the documentation of FontForge you have to copy the file Curvatura.
 `C:\Users\[YOUR USERNAME HERE]\AppData\Roaming\FontForge\python`.
 
 ## New Tools Added By Curvatura
-After installation, FontForge will show in the Tools menu 4 new entries: "Harmonize", "Harmonize (variant)" ,"Tunnify (balance)", "Add points of inflection". The first three tools are all some kind of smoothing the bezier curves. Their effects are visualized in the following image (you will not see the light blue curvature combs in FontForge, they have been added here for documentation reasons):
+After installation, FontForge will show in the Tools menu 6 new entries: "Harmonize", "Harmonize (variant)" ,"Tunnify (balance)", 
+"Set Tunni ratio", "Set tension", "Add points of inflection". The first three tools are all some kind of smoothing the bezier curves. 
+Their effects are visualized in the following image (you will not see the light blue curvature combs in FontForge, 
+they have been added here for documentation reasons):
 
 <img width="1227" alt="curvatura tools for cubic beziers" src="https://user-images.githubusercontent.com/11213578/70742200-48271780-1d1d-11ea-856f-9b00c33cb17b.png">
+
+"Set Tunni ratio" will set a constant Tunni ratio for all selected smooth paths. The default ratio 0.55 will make bezier arcs between a horizontal and
+a vertical node to approximately elliptic arcs.
+
+<img width="520" alt="set Tunni ratio" src="https://user-images.githubusercontent.com/11213578/71370881-97880600-25af-11ea-8b6e-97f1e321579c.png">
+
+"Set tension" will set the tension as in METAPOST or METAFONT for all selected smooth paths. The algorithm is described in The METAFONTbook by 
+Donald E. Knuth. 
+
+<img width="520" alt="set Tunni ratio" src="https://user-images.githubusercontent.com/11213578/71370882-97880600-25af-11ea-9aef-f19e8273c222.png">
 
 The last tool ("Add points of inflection") adds points of inflection (FontForge can natively display them but not natively add them):
 
@@ -47,6 +60,7 @@ The "Harmonize" tool uses the same algorithm as for cubic bezier splines (but of
 * Some computations in `Curvatura.py` have been optimized in comparison to `harmonize-tunnify-inflection.py` (e.g. square roots are less frequently)
 * The design of `Curvatura.py` allows the use as a FontForge plugin, as a python class and as a command line program. `harmonize-tunnify-inflection.py` only served as a FontForge plugin. `Curvatura.py` implements additionaly the computation of the curvature at time *t* of a bezier spline as a helping method.
 * `harmonize-tunnify-inflection.py` had no sub menu. The menu entries of `Curvatura.py` are contained in a sub menu called "Curvatura". This makes the tools easier distinctable from tools of other suppliers. 
+* `Curvatura.py` implements the additional methods "set Tunni ratio" and "set tension".
 
 ## Use `Curvatura.py` In Command Line
 You can use `Curvatura.py` in the command line. It will harmonize all glyhps in a font and needs exactely 2 arguments:

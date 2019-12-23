@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Curvatura version 20191213
+# Curvatura version 20191223
 
 # This is a FontForge plug-in to harmonize or tunnify 
 # or add inflection points to the selected parts.
@@ -27,7 +27,7 @@
 
 # Copyright 2019 by Linus Romer
 
-import fontforge
+import fontforge,math,cmath
 
 class Curvatura:
 		
@@ -44,7 +44,22 @@ class Curvatura:
 			return -1	
 		else:
 			return 0
-			
+	
+	# Returns for a cubic bezier path (a,b), (c,d), (e,f), (g,h)
+	# the directions at (a,b) and (g,h). 
+	# Other than the derivative, the direction
+	# has never length 0 as long as (a,b) != (g,h)
+	@staticmethod
+	def directions_at_nodes(a,b,c,d,e,f,g,h):
+		if (c,d) == (a,b) and (e,f) == (g,h):
+			return g-a,h-b,g-a,h-b
+		elif (c,d) == (a,b):
+			return e-a,f-b,g-e,h-f
+		elif (e,f) == (g,h):
+			return c-a,d-b,g-c,h-d
+		else: # generic case
+			return c-a,d-b,g-e,h-f
+	
 	# Returns the curvature at time t of a cubic bezier segment
 	# (a,b), (c,d), (e,f), (g,h).
 	# This method is not necessary for the FontForge plugin but may be
@@ -106,23 +121,33 @@ class Curvatura:
 				c[i:i+4] = doublesegment		
 
 
-	# Returns the corner point c which is the intersection of the
-	# lines a1--a2 and b1--b2 or None if there is no intersection.
+	# Returns the "corner point" of a cubic bezier segment
+	# (a,b),(c,d),(e,f),(g,h), which is the intersection of the
+	# lines (a,b)--(c,d) and (e,f)--(g,h) in the generic case.
+	# If there is no reasonable corner point None,None will be returned.
 	@staticmethod
-	def corner_point(a1x,a1y,a2x,a2y,b1x,b1y,b2x,b2y):
-		if ((a1x*b1y)-(a1x*b2y)-(a1y*b1x)+(a1y*b2x)
-		-(a2x*b1y)+(a2x*b2y)+(a2y*b1x)-(a2y*b2x)) == 0 \
-		and ((a1x*b1y)-(a1x*b2y)-(a1y*b1x)+(a1y*b2x) \
-		-(a2x*b1y)+(a2x*b2y)+(a2y*b1x)-(a2y*b2x)) == 0:
-			return None
-		else:
-			return ((((-a1x)+a2x)*((a1x*b1y)-(a1x*b2y)-(a1y*b1x)+(a1y*b2x)
-			+(b1x*b2y)-(b1y*b2x))/((a1x*b1y)-(a1x*b2y)-(a1y*b1x)+(a1y*b2x)
-			-(a2x*b1y)+(a2x*b2y)+(a2y*b1x)-(a2y*b2x)))+a1x ,
-			(((-a1y)+a2y)*((a1x*b1y)-(a1x*b2y)-(a1y*b1x)+(a1y*b2x)
-			+(b1x*b2y)-(b1y*b2x))/((a1x*b1y)-(a1x*b2y)-(a1y*b1x)+(a1y*b2x)
-			-(a2x*b1y)+(a2x*b2y)+(a2y*b1x)-(a2y*b2x)))+a1y)
-			
+	def corner_point(a,b,c,d,e,f,g,h):
+		if (c,d) == (a,b) and (e,f) == (g,h):
+			return .5*(a+g),.5*(b+h)
+		elif (c,d) == (a,b):
+			return e,f
+		elif (e,f) == (g,h):
+			return c,d
+		else: # generic case
+			# check if the handles are on the same side 
+			# and no inflection occurs and no division by zero
+			# will occur:
+			if Curvatura.side(c,d,a,b,g,h)*Curvatura.side(e,f,a,b,g,h) \
+			< 0 or not Curvatura.inflection(a,b,c,d,e,f,g,h) is None \
+			or c*h-a*h-d*g+b*g-c*f+a*f+d*e-b*e == 0 \
+			or c*h-a*h-d*g+b*g-c*f+a*f+d*e-b*e == 0:
+				return None,None
+			else: # generic case
+				return a+((c-a)*(e*h-a*h-f*g+b*g+a*f-b*e))\
+				/(c*h-a*h-d*g+b*g-c*f+a*f+d*e-b*e),\
+				b+((d-b)*(e*h-a*h-f*g+b*g+a*f-b*e))\
+				/(c*h-a*h-d*g+b*g-c*f+a*f+d*e-b*e)
+
 	# Returns the inflection point time of a cubic bezier segment
 	# (a,b),(c,d),(e,f),(g,h).
 	# If there is no inflection point, None is returned.
@@ -153,11 +178,8 @@ class Curvatura:
 		l = len(c)
 		j = 0 # index that will run from 0 to l-1 (may contain jumps)
 		while j < l: # going through the points c[j]
-			# if a point is selected
-			# search for the next on_curve point
+			# if a point is selected search for the next on_curve point
 			# this must be the overovernext point
-			# (which is the only case
-			# that interests us)
 			if (c[j].on_curve and not c[(j+1)%l].on_curve \
 			and not c[(j+2)%l].on_curve and c[(j+3)%l].on_curve) \
 			and (c[j].selected and c[(j+3)%l].selected \
@@ -174,26 +196,17 @@ class Curvatura:
 				j += 2 # we can jump by 2+1 instead of 1
 			j += 1
 
-	# Tunnifies a cubic bezier path a0,a1,a2,a3
-	# i.e. moves the handles a1 and a2 on the lines a0--a1 and a2--a3 resp.
-	# in order to fulfill the tunni ideal stated by Eduardo Tunni.
+	# Tunnifies a cubic bezier path (a,b), (c,d), (e,f), (g,h).
+	# i.e. moves the handles (c,d) and (e,f) on the lines (a,b)--(c,d) 
+	# and (e,f)--(g,h) in order to reach the ideal stated by Eduardo Tunni.
 	@staticmethod
-	def tunnify(a0x,a0y,a1x,a1y,a2x,a2y,a3x,a3y):
-		# check if the handles are on the same side 
-		# and no inflection occurs:
-		if Curvatura.side(a1x,a1y,a0x,a0y,a3x,a3y)*Curvatura.side(a2x,a2y,a0x,a0y,a3x,a3y) > 0 \
-		and Curvatura.inflection(a0x,a0y,a1x,a1y,a2x,a2y,a3x,a3y) is None:
-			c = Curvatura.corner_point(a0x,a0y,a1x,a1y,a2x,a2y,a3x,a3y)
-			if not c is None:
-				if not c == (a0x,a0y) and not c == (a3x,a3y):
-					cx,cy = c
-					t = .5*( (((a1x-a0x)**2+(a1y-a0y)**2)/ \
-					((cx-a0x)**2+(cy-a0y)**2))**.5 \
-					+ (((a2x-a3x)**2+(a2y-a3y)**2) \
-					/((cx-a3x)**2+(cy-a3y)**2))**.5 )
-					return (1-t)*a0x+t*cx,(1-t)*a0y+t*cy, \
-					(1-t)*a3x+t*cx,(1-t)*a3y+t*cy
-		return a1x,a1y,a2x,a2y	
+	def tunnify(a,b,c,d,e,f,g,h):
+		u,v = Curvatura.corner_point(a,b,c,d,e,f,g,h)
+		if not u is None and not v is None:
+			t = .5*((((c-a)**2+(d-b)**2)/((u-a)**2+(v-b)**2))**.5\
+			+(((e-g)**2+(f-h)**2)/((u-g)**2+(v-h)**2))**.5)
+			return (1-t)*a+t*u,(1-t)*b+t*v,(1-t)*g+t*u,(1-t)*h+t*v
+		return c,d,e,f
 
 	# Tunnifies the handles of a fontforge contour c.
 	# The boolean is_glyph_variant is true iff the point selection
@@ -203,51 +216,73 @@ class Curvatura:
 		l = len(c)
 		j = 0 # index that will run from 0 to l-1 (may contain jumps)
 		while j < l: # going through the points c[j]
-			# if a point is selected
-			# search for the next on_curve point
+			# if a point is selected search for the next on_curve point
 			# this must be the overovernext point
-			# (which is the only case
-			# that interests us)
 			if (c[j].on_curve and not c[(j+1)%l].on_curve \
 			and not c[(j+2)%l].on_curve and c[(j+3)%l].on_curve) \
 			and (c[j].selected and c[(j+3)%l].selected \
 			or c[(j+2)%l].selected or c[(j+1)%l].selected \
 			or is_glyph_variant) and (j+3)%l != j:
 				c[(j+1)%l].x,c[(j+1)%l].y,c[(j+2)%l].x,c[(j+2)%l].y = \
-				Curvatura.tunnify(c[j].x, c[j].y,	c[(j+1)%l].x, c[(j+1)%l].y, 
-				c[(j+2)%l].x, c[(j+2)%l].y, c[(j+3)%l].x, c[(j+3)%l].y)
+				Curvatura.tunnify(c[j].x,c[j].y,c[(j+1)%l].x,c[(j+1)%l].y, 
+				c[(j+2)%l].x,c[(j+2)%l].y,c[(j+3)%l].x,c[(j+3)%l].y)
 				j += 2 # we can jump by 2+1 instead of 1
 			j += 1
+			
+	# Sets a fixed ratio t for the handles of a cubic bezier path 
+	# (a,b), (c,d), (e,f), (g,h) from the nodes to the corner point.
+	@staticmethod
+	def tunnifix(a,b,c,d,e,f,g,h,t):
+		u,v = Curvatura.corner_point(a,b,c,d,e,f,g,h)
+		if not u is None and not v is None:
+			return (1-t)*a+t*u,(1-t)*b+t*v,(1-t)*g+t*u,(1-t)*h+t*v
+		return c,d,e,f
 				
+	# Applies tunnifix() to a fontforge contour c.
+	# The boolean is_glyph_variant is true iff the point selection
+	# in the UI does not matter.
+	@staticmethod
+	def tunnifix_contour(c,t,is_glyph_variant):
+		l = len(c)
+		j = 0 # index that will run from 0 to l-1 (may contain jumps)
+		while j < l: # going through the points c[j]
+			# if a point is selected search for the next on_curve point
+			# this must be the overovernext point
+			if (c[j].on_curve and not c[(j+1)%l].on_curve \
+			and not c[(j+2)%l].on_curve and c[(j+3)%l].on_curve) \
+			and (c[j].selected and c[(j+3)%l].selected \
+			or c[(j+2)%l].selected or c[(j+1)%l].selected \
+			or is_glyph_variant) and (j+3)%l != j:
+				c[(j+1)%l].x,c[(j+1)%l].y,c[(j+2)%l].x,c[(j+2)%l].y = \
+				Curvatura.tunnifix(c[j].x,c[j].y,c[(j+1)%l].x,c[(j+1)%l].y, 
+				c[(j+2)%l].x,c[(j+2)%l].y,c[(j+3)%l].x,c[(j+3)%l].y,t)
+				j += 2 # we can jump by 2+1 instead of 1
+			j += 1
+	
 	# This is the low level harmonize algorithm as described at
 	# gist.github.com/simoncozens/3c5d304ae2c14894393c6284df91be5b
 	# by Simon Cozens. This is the variant, where the nodes may move
-	# but not the handles (in the following called harmonize in 
-	# opposition to harmonize_handles).
-	# Given two successive cubic bezier curves a0,a1,a2,a3 and 
-	# b0,b1,b2,b3 that are smooth at a3 = b0 (i.e. a2, a3 = b0 and 
-	# b1 are approximately on one line) we calculate the corner point c 
-	# which is the intersection of the lines a1--a2 and b1--b2.
-	# Then determine the ratios pa = |a1, a2| / |a2, c| 
-	# and pb = |c, b1| / |b1, b2| and calculate their
-	# geometric mean p = (p0 * p1) ** .5. Finally, place a3 = b0 such 
-	# that it is situated at t = p / (p+1) of the line a2--b1.
+	# but not the handles.
+	# Given two adjacent cubic bezier curves (a,b), (c,d), (e,f), (g,h)
+	# and (g,h), (i,j), (k,l), (m,n) that are smooth at (g,h)
+	# (i.e. (g,h) is approximately on the line (e,f)--(i,j) )
+	# we calculate the corner point (u,v)
+	# which is the intersection of the lines (a,b)--(c,d) and 
+	# (i,j)--(k,l). Then determine the ratio p as below. 
+	# Finally, set (g,h) such that it is situated at 
+	# t = p / (p+1) of the line (e,f)--(i,j).
 	# This method does not check if the necessary conditions are 
 	# actually met (such as smoothness).
 	@staticmethod
-	def harmonize_cubic(a1x,a1y,a2x,a2y,a3x,a3y,b1x,b1y,b2x,b2y):
-		c = Curvatura.corner_point(a1x,a1y,a2x,a2y,b1x,b1y,b2x,b2y)
-		if not c is None:
-			cx,cy = c
-			if not (cx,cy) == (a2x,a2y) and not (b1x,b1y) == (b2x,b2y):
-				p = ( ((a1x-a2x)**2+(a1y-a2y)**2) \
-				/((cx-a2x)**2+(cy-a2y)**2)*((cx-b1x)**2+(cy-b1y)**2) \
-				/((b1x-b2x)**2+(b1y-b2y)**2) )**.25
-				return a2x+p/(p+1)*(b1x-a2x),a2y+p/(p+1)*(b1y-a2y)
-			else:
-				return a3x,a3y
+	def harmonize_cubic(c,d,e,f,g,h,i,j,k,l):
+		u,v = Curvatura.corner_point(c,d,e,f,i,j,k,l)
+		if not u is None and not v is None \
+		and not (u,v) == (e,f) and not (i,j) == (k,l):
+			p = (((c-e)**2+(d-f)**2)/((u-e)**2+(v-f)**2)\
+			*((u-i)**2+(v-j)**2)/((i-k)**2+(j-l)**2) )**.25
+			return e+p/(p+1)*(i-e),f+p/(p+1)*(j-f)
 		else:
-			return a3x,a3y	
+			return g,h
 				
 	# Harmonizes the nodes of a fontforge contour c.
 	# The boolean is_glyph_variant is true iff the point selection
@@ -305,10 +340,57 @@ class Curvatura:
 					else:
 						i += 1						
 
-	# Harmonizes or tunnifies or adds inflection points
-	# to the selected contours (for glyph view).
+	# Returns the tension ratio f(t,p) as described 
+	# at p131 of The METAFONTbook.
+	@staticmethod		
+	def tension_ratio(t,p):
+		return (2+2**.5*(math.sin(t)-.0625*math.sin(p)) \
+		*(math.sin(p)-.0625*math.sin(t))*(math.cos(t)-math.cos(p))) \
+		/(3*(1+.5*(5**.5-1)*math.cos(t)+.5*(3-5**.5)*math.cos(p)))
+	
+	# Returns the 4 coordinates of the controls of a cubic bezier path
+	# (a,b){k,l} .. tension alpha and beta .. {m,n}(g,h)
+	# as described at p131 of The METAFONTbook.
+	@staticmethod
+	def tension(a,b,i,k,alpha,beta,m,n,g,h):
+		z0 = complex(a,b)
+		w0 = complex(i,k)
+		z1 = complex(g,h)
+		w1 = complex(m,n)
+		t = cmath.phase(w0/(z1-z0))
+		p = cmath.phase((z1-z0)/w1)
+		u = z0+cmath.rect(Curvatura.tension_ratio(t,p)/alpha,t)*(z1-z0)
+		v = z1-cmath.rect(Curvatura.tension_ratio(p,t)/beta,-p)*(z1-z0)
+		return u.real,u.imag,v.real,v.imag
+			
+	# Sets the tension of a fontforge contour c to 1 by adjusting the
+	# controls as described at p131 of The METAFONTbook.
+	# The boolean is_glyph_variant is true iff the point selection
+	# in the UI does not matter.
+	@staticmethod
+	def tension_contour(c,tension,is_glyph_variant):
+		l = len(c)
+		j = 0 # index that will run from 0 to l-1 (may contain jumps)
+		while j < l: # going through the points c[j]
+			# if a point is selected search for the next on_curve point
+			# this must be the overovernext point
+			if (c[j].on_curve and not c[(j+1)%l].on_curve \
+			and not c[(j+2)%l].on_curve and c[(j+3)%l].on_curve) \
+			and (c[j].selected and c[(j+3)%l].selected \
+			or c[(j+2)%l].selected or c[(j+1)%l].selected \
+			or is_glyph_variant) and (j+3)%l != j:
+				i,k,m,n = Curvatura.directions_at_nodes(c[j].x,c[j].y,
+				c[(j+1)%l].x,c[(j+1)%l].y,c[(j+2)%l].x,c[(j+2)%l].y,
+				c[(j+3)%l].x,c[(j+3)%l].y)
+				c[(j+1)%l].x,c[(j+1)%l].y,c[(j+2)%l].x,c[(j+2)%l].y = \
+				Curvatura.tension(c[j].x,c[j].y,i,k,tension,tension,m,n, 
+				c[(j+3)%l].x,c[(j+3)%l].y)
+				j += 2 # we can jump by 2+1 instead of 1
+			j += 1
+	
+	# This is the high level method for using the methods described before.
 	# The string action is either "harmonize", "harmonize_variant",
-	# "tunnify" or "inflection".
+	# "tunnify", "tunnifix", "inflection" or "tension".
 	@staticmethod
 	def modify_contours(action,glyph):
 		glyph.preserveLayerAsUndo()
@@ -322,6 +404,26 @@ class Curvatura:
 				if layer[i][j].selected:
 					is_glyph_variant = False
 					break
+		if action == "tension":
+			tensionstring = fontforge.askString("Tension","Choose a number greater or equal 0.75.","1")
+			try:
+				float(tensionstring)
+				tension = float(tensionstring)
+				if tension < .75:
+					tension = 1
+					print("Invalid number, I will set tension 1.")
+			except ValueError:
+				tension = 1
+				print("Invalid number, I will set the tension 1.")
+		if action == "tunnifix":
+			tstring = fontforge.askString("Fixed Tunni ratio","Choose a number (you may prefer a number between 0 and 1).","0.55")
+			try:
+				float(tstring)
+				t = float(tstring)
+			except ValueError:
+				t = .55 # this is the approximated ratio for the superness 1/sqrt(2) i.e. circle
+				# the exact calculation would be (8/sqrt(2)-4)/3
+				print("Invalid number, I will set the ratio 0.55.")
 		for i in range(len(layer)): # going through the contours layer[i]
 			if action == "harmonize":
 				Curvatura.harmonize_contour(layer[i],is_glyph_variant,False)
@@ -329,16 +431,39 @@ class Curvatura:
 				Curvatura.harmonize_contour(layer[i],is_glyph_variant,True)
 			elif action == "tunnify" and not layer[i].is_quadratic:
 				Curvatura.tunnify_contour(layer[i],is_glyph_variant)
+			elif action == "tunnifix" and not layer[i].is_quadratic:
+				Curvatura.tunnifix_contour(layer[i],t,is_glyph_variant)
 			elif action == "inflection" and not layer[i].is_quadratic:
 				Curvatura.inflection_contour(layer[i],is_glyph_variant)
+			elif action == "tension" and not layer[i].is_quadratic:
+				Curvatura.tension_contour(layer[i],tension,is_glyph_variant)
 		glyph.layers[glyph.activeLayer] = layer
 		
-	# Harmonizes or tunnifies or adds inflection points
-	# to the selected glyphs (for font view).
+	# This is the high level method for using the methods described before.
 	# The string action is either "harmonize", "harmonize_variant",
-	# "tunnify" or "inflection".
+	# "tunnify", "tunnifix", "inflection" or "tension".
 	@staticmethod
 	def modify_glyphs(action,font):
+		if action == "tension":
+			tensionstring = fontforge.askString("Tension","Choose a number greater or equal 0.75.","1")
+			try:
+				float(tensionstring)
+				tension = float(tensionstring)
+				if tension < 0.75:
+					tension = 1
+					print("Invalid number, I will take tension 1.")
+			except ValueError:
+				tension = 1
+				print("Invalid number, I will take tension 1.")
+		if action == "tunnifix":
+			tstring = fontforge.askString("Fixed Tunni ratio","Choose a number (you may prefer a number between 0 and 1).","0.55")
+			try:
+				float(tstring)
+				t = float(tstring)
+			except ValueError:
+				t = .55 # this is the approximated ratio for the superness 1/sqrt(2) i.e. circle
+				# the exact calculation would be (8/sqrt(2)-4)/3
+				print("Invalid number, I will set the ratio 0.55.")
 		for glyph in font.selection.byGlyphs:
 			glyph.preserveLayerAsUndo()
 			layer = glyph.layers[glyph.activeLayer]
@@ -349,8 +474,12 @@ class Curvatura:
 					Curvatura.harmonize_contour(layer[i],True,True)
 				elif action == "tunnify" and not layer[i].is_quadratic:
 					Curvatura.tunnify_contour(layer[i],True)
+				elif action == "tunnifix" and not layer[i].is_quadratic:
+					Curvatura.tunnifix_contour(layer[i],t,True)
 				elif action == "inflection" and not layer[i].is_quadratic:
 					Curvatura.inflection_contour(layer[i],True)
+				elif action == "tension" and not layer[i].is_quadratic:
+					Curvatura.tension_contour(layer[i],tension,True)
 			glyph.layers[glyph.activeLayer] = layer
 			
 	# Returns false iff no glyph is selected 
@@ -375,6 +504,12 @@ if __name__ == '__main__':
 		Curvatura.are_glyphs_selected,"tunnify","Font",
 		None,"Curvatura","Tunnify (balance)");
 		fontforge.registerMenuItem(Curvatura.modify_glyphs,
+		Curvatura.are_glyphs_selected,"tunnifix","Font",
+		None,"Curvatura","Set Tunni ratio");
+		fontforge.registerMenuItem(Curvatura.modify_glyphs,
+		Curvatura.are_glyphs_selected,"tension","Font",
+		None,"Curvatura","Set tension");
+		fontforge.registerMenuItem(Curvatura.modify_glyphs,
 		Curvatura.are_glyphs_selected,"inflection","Font",
 		None,"Curvatura","Add points of inflection");
 		fontforge.registerMenuItem(Curvatura.modify_contours,None,
@@ -383,6 +518,10 @@ if __name__ == '__main__':
 		"harmonize_variant","Glyph",None,"Curvatura","Harmonize (variant)");
 		fontforge.registerMenuItem(Curvatura.modify_contours,None,
 		"tunnify","Glyph",None,"Curvatura","Tunnify (balance)");
+		fontforge.registerMenuItem(Curvatura.modify_contours,None,
+		"tunnifix","Glyph",None,"Curvatura","Set Tunni ratio");
+		fontforge.registerMenuItem(Curvatura.modify_contours,None,
+		"tension","Glyph",None,"Curvatura","Set tension");
 		fontforge.registerMenuItem(Curvatura.modify_contours,None,
 		"inflection","Glyph",None,"Curvatura","Add points of inflection");
 	else:
