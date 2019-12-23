@@ -50,6 +50,8 @@ The last tool ("Add points of inflection") adds points of inflection (FontForge 
 
 ### Curvatura Tools For Quadratic Bezier Splines
 If you are working with quadratic bezier splines the tools "Tunnify (balance)" and "Add points of inflection" will have no effect, because quadratic bezier splines are already tunnified and point of inflections may only occur at the nodes of the splines. 
+"Set tension" and "Set Tunni ratio" do not have a meaning for quadratic bezier splines and therefore do not affect paths, neither. 
+
 The "Harmonize" tool uses the same algorithm as for cubic bezier splines (but of course speed optimized). The "Harmonize (variant)" tool has the same effect as applying the "Harmonize (variant)" tools infinitely often.
 
 <img width="680" alt="curvatura tools for quadratic beziers" src="https://user-images.githubusercontent.com/11213578/70742199-48271780-1d1d-11ea-98d1-95f92222635b.png">
