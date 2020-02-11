@@ -18,7 +18,7 @@ sudo apt install libgdraw4=20190413-27-g1acfefa-0ubuntu1~bionic libfontforge1=20
 ```
 If you are bound to an older version of FontForge, you may try 
 [harmonize-tunnify-inflection](https://github.com/linusromer/harmonize-tunnify-inflection) instead, 
-which should work with older versions of FontForge too.
+which should work with older versions of FontForge too (but is not being developped anymore).
 
 ## Installation
 According to the documentation of FontForge you have to copy the file Curvatura.py to 
@@ -26,9 +26,11 @@ According to the documentation of FontForge you have to copy the file Curvatura.
 `~/.config/fontforge/python` and for Windows it might be at
 `C:\Users\[YOUR USERNAME HERE]\AppData\Roaming\FontForge\python`.
 
+If you want to use hotkeys as well, you can replace the `hotkeys` file in the parent directory
+by the `hotkeys` file of this repository.
+
 ## New Tools Added By Curvatura
-After installation, FontForge will show in the Tools menu 6 new entries: "Harmonize", "Harmonize (variant)" ,"Tunnify (balance)", 
-"Set Tunni ratio", "Set tension", "Add points of inflection". The first three tools are all some kind of smoothing the bezier curves. 
+After installation, FontForge will show in the Tools menu 4 new entries: "Harmonize", "Make G3-continuous" ,"Tunnify (balance)" and "Add points of inflection". The first three tools are all some kind of smoothing the bezier curves. 
 Their effects are visualized in the following image (you will not see the light blue curvature combs in FontForge, 
 they have been added here for documentation reasons):
 
@@ -60,9 +62,9 @@ The "Harmonize" tool uses the same algorithm as for cubic bezier splines (but of
 * Due to a bug, earlier versions of FontForge could not use `fontforge.point.type`. Therefore, I have written a workaround in `harmonize-tunnify-inflection.py`. The workaround is way slower than just checking `fontforge.point.type`. `Curvatura.py` now uses the faster `fontforge.point.type`.
 * `harmonize-tunnify-inflection.py` cannot handle quadratic bezier splines, whereas `Curvatura.py` can handle them.
 * Some computations in `Curvatura.py` have been optimized in comparison to `harmonize-tunnify-inflection.py` (e.g. square roots are less frequently)
-* The design of `Curvatura.py` allows the use as a FontForge plugin, as a python class and as a command line program. `harmonize-tunnify-inflection.py` only served as a FontForge plugin. `Curvatura.py` implements additionaly the computation of the curvature at time *t* of a bezier spline as a helping method.
+* The design of `Curvatura.py` allows the use as a FontForge plugin, as a python class and as a command line program. `harmonize-tunnify-inflection.py` only served as a FontForge plugin.
 * `harmonize-tunnify-inflection.py` had no sub menu. The menu entries of `Curvatura.py` are contained in a sub menu called "Curvatura". This makes the tools easier distinctable from tools of other suppliers. 
-* `Curvatura.py` implements the additional methods "set Tunni ratio" and "set tension".
+* `Curvatura.py` implements the additional method "Make G3 continuous".
 
 ## Use `Curvatura.py` In Command Line
 You can use `Curvatura.py` in the command line. It will harmonize all glyhps in a font and needs exactely 2 arguments:
