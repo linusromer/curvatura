@@ -30,33 +30,27 @@ If you want to use hotkeys as well, you can replace the `hotkeys` file in the pa
 by the `hotkeys` file of this repository.
 
 ## New Tools Added By Curvatura
-After installation, FontForge will show in the Tools menu 4 new entries: "Harmonize", "Make G3-continuous" ,"Tunnify (balance)" and "Add points of inflection". The first three tools are all some kind of smoothing the bezier curves. 
+After installation, FontForge will show in the Tools menu 4 new entries: "Harmonize", "Make G3-continuous" ,"Tunnify (balance)" and "Add points of inflection". The first two tools are smoothing the curvature of the Bézier curves. 
 Their effects are visualized in the following image (you will not see the light blue curvature combs in FontForge, 
 they have been added here for documentation reasons):
 
-<img width="1227" alt="curvatura tools for cubic beziers" src="https://user-images.githubusercontent.com/11213578/70742200-48271780-1d1d-11ea-856f-9b00c33cb17b.png">
+<img width="800" alt="curvatura tools for cubic beziers" src="https://user-images.githubusercontent.com/11213578/74227914-bb1e2180-4cbf-11ea-89c1-a70aabf6be2f.png">
 
-"Set Tunni ratio" will set a constant Tunni ratio for all selected smooth paths. The default ratio 0.55 will make bezier arcs between a horizontal and
-a vertical node to approximately elliptic arcs.
+Note that "Harmonize" moves the node between its handles, whereas "Make G3 continuous" scales the handles (see the [documention of the formulae](https://github.com/linusromer/curvatura/blob/master/curvatura-doc.pdf)). To put it bluntly, "Harmonize" can be applied thoughtless in many cases, but "Make G3 continuous" may have unexpected results and therefore should be applied carefully.
 
-<img width="420" alt="set Tunni ratio" src="https://user-images.githubusercontent.com/11213578/71370881-97880600-25af-11ea-8b6e-97f1e321579c.png">
+"Tunnify (balance)" moves the handles of a cubic Bézier segment such that the line between the handles is parallel to the line between the nodes. This tool is advantageous if you are working with several masters, as it makes them more consistent.
 
-"Set tension" will set the tension as in METAPOST/METAFONT for all selected smooth paths. The algorithm is described in The METAFONTbook by 
-Donald E. Knuth. 
-
-<img width="420" alt="set tension" src="https://user-images.githubusercontent.com/11213578/71370882-97880600-25af-11ea-9aef-f19e8273c222.png">
+<img width="600" alt="Tunnify (balance)" src="https://user-images.githubusercontent.com/11213578/74228661-316f5380-4cc1-11ea-8bb3-3ca2a0af65ea.png">
 
 The last tool ("Add points of inflection") adds points of inflection (FontForge can natively display them but not natively add them):
 
-<img width="520" alt="inflection-all" src="https://user-images.githubusercontent.com/11213578/70742783-9c7ec700-1d1e-11ea-8dcf-9d488496cebc.png">
+<img width="600" alt="inflection-all" src="https://user-images.githubusercontent.com/11213578/70742783-9c7ec700-1d1e-11ea-8dcf-9d488496cebc.png">
 
 ### Curvatura Tools For Quadratic Bezier Splines
-If you are working with quadratic bezier splines the tools "Tunnify (balance)" and "Add points of inflection" will have no effect, because quadratic bezier splines are already tunnified and point of inflections may only occur at the nodes of the splines. 
-"Set tension" and "Set Tunni ratio" do not have a meaning for quadratic bezier splines and therefore do not affect paths, neither. 
+If you are working with quadratic bezier splines the tools "Tunnify (balance)", "Add points of inflection" will have no effect, because quadratic bezier splines are already tunnified and point of inflections may only occur at the nodes of the splines. 
+"Make G3 continuous" does not have a meaning for quadratic Bézier splines and therefore do not affect paths, neither. 
 
-The "Harmonize" tool uses the same algorithm as for cubic bezier splines (but of course speed optimized). The "Harmonize (variant)" tool has the same effect as applying the "Harmonize (variant)" tools infinitely often.
-
-<img width="680" alt="curvatura tools for quadratic beziers" src="https://user-images.githubusercontent.com/11213578/70742199-48271780-1d1d-11ea-98d1-95f92222635b.png">
+The "Harmonize" tool uses a similar algorithm as for cubic Bézier splines (see the [documention of the formulae](https://github.com/linusromer/curvatura/blob/master/curvatura-doc.pdf)). As it is a iterated algorithm, results may change slightly if applied two times.
 
 ## Comparison To harmonize-tunnify-inflection.py
 * Due to a bug, earlier versions of FontForge could not use `fontforge.point.type`. Therefore, I have written a workaround in `harmonize-tunnify-inflection.py`. The workaround is way slower than just checking `fontforge.point.type`. `Curvatura.py` now uses the faster `fontforge.point.type`.
