@@ -40,11 +40,11 @@ Note that "Harmonize" moves the node between its handles, whereas "Make G3 conti
 
 "Tunnify (balance)" moves the handles of a cubic Bézier segment such that the line between the handles is parallel to the line between the nodes. This tool is advantageous if you are working with several masters, as it makes them more consistent.
 
-<img width="520" alt="Tunnify (balance)" src="https://user-images.githubusercontent.com/11213578/74228661-316f5380-4cc1-11ea-8bb3-3ca2a0af65ea.png">
+<img width="600" alt="Tunnify (balance)" src="https://user-images.githubusercontent.com/11213578/74228661-316f5380-4cc1-11ea-8bb3-3ca2a0af65ea.png">
 
 The last tool ("Add points of inflection") adds points of inflection (FontForge can natively display them but not natively add them):
 
-<img width="520" alt="inflection-all" src="https://user-images.githubusercontent.com/11213578/70742783-9c7ec700-1d1e-11ea-8dcf-9d488496cebc.png">
+<img width="600" alt="inflection-all" src="https://user-images.githubusercontent.com/11213578/70742783-9c7ec700-1d1e-11ea-8dcf-9d488496cebc.png">
 
 ### Curvatura Tools For Quadratic Bezier Splines
 If you are working with quadratic bezier splines the tools "Tunnify (balance)", "Add points of inflection" will have no effect, because quadratic bezier splines are already tunnified and point of inflections may only occur at the nodes of the splines. 
