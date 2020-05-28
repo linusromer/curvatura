@@ -34,23 +34,19 @@ After installation, FontForge will show in the Tools menu 4 new entries: "Harmon
 Their effects are visualized in the following image (you will not see the light blue curvature combs in FontForge, 
 they have been added here for documentation reasons):
 
-<img width="800" alt="curvatura tools for cubic beziers" src="https://user-images.githubusercontent.com/11213578/83176179-51663e00-a11d-11ea-9f52-8f72907ab12d.png">
+<img width="900" alt="curvatura tools for cubic beziers" src="https://user-images.githubusercontent.com/11213578/83176179-51663e00-a11d-11ea-9f52-8f72907ab12d.png">
 
 Note that "Harmonize" moves the node between its handles, whereas "Harmonize handles" scales the handles (see the [documention of the formulae](https://github.com/linusromer/curvatura/blob/master/curvatura-doc.pdf)). 
 
-<img width="400" src="https://user-images.githubusercontent.com/11213578/83176392-a904a980-a11d-11ea-97ad-89021ed38aff.gif">
-<img width="400" src="https://user-images.githubusercontent.com/11213578/83176431-ba4db600-a11d-11ea-8980-ea43499f32ae.gif">
+<img width="400" src="https://user-images.githubusercontent.com/11213578/83176392-a904a980-a11d-11ea-97ad-89021ed38aff.gif"> <img width="400" src="https://user-images.githubusercontent.com/11213578/83176431-ba4db600-a11d-11ea-8980-ea43499f32ae.gif">
 
-<img width="400" src="https://user-images.githubusercontent.com/11213578/83176569-ee28db80-a11d-11ea-9dbc-71e55a1e1685.gif">
-<img width="400" src="https://user-images.githubusercontent.com/11213578/83176571-ee28db80-a11d-11ea-9ccb-2dbb7601df70.gif">
+<img width="300" src="https://user-images.githubusercontent.com/11213578/83176569-ee28db80-a11d-11ea-9dbc-71e55a1e1685.gif"> <img width="300" src="https://user-images.githubusercontent.com/11213578/83176571-ee28db80-a11d-11ea-9ccb-2dbb7601df70.gif">
 
 "Tunnify (balance)" moves the handles of a cubic Bézier segment such that the line between the handles is parallel to the line between the nodes. This tool is advantageous if you are working with several masters, as it makes them more consistent.
 
-<img width="400" src="https://user-images.githubusercontent.com/11213578/83176638-0f89c780-a11e-11ea-9c67-08f823c2cbe1.gif">
-<img width="400" src="https://user-images.githubusercontent.com/11213578/83176642-10225e00-a11e-11ea-954d-eae34fdd9c95.gif">
-<img width="400" src="https://user-images.githubusercontent.com/11213578/83176643-10225e00-a11e-11ea-9ca8-c6d8be1ea1ca.gif">
-<img width="400" src="https://user-images.githubusercontent.com/11213578/83176823-64c5d900-a11e-11ea-91ed-7a889134f4a9.gif">
-<img width="400" src="https://user-images.githubusercontent.com/11213578/83176824-64c5d900-a11e-11ea-9c11-8eae59c48cb5.gif">
+<img width="300" src="https://user-images.githubusercontent.com/11213578/83176638-0f89c780-a11e-11ea-9c67-08f823c2cbe1.gif"> <img width="300" src="https://user-images.githubusercontent.com/11213578/83176642-10225e00-a11e-11ea-954d-eae34fdd9c95.gif"> <img width="300" src="https://user-images.githubusercontent.com/11213578/83176643-10225e00-a11e-11ea-9ca8-c6d8be1ea1ca.gif">
+
+<img width="150" src="https://user-images.githubusercontent.com/11213578/83176823-64c5d900-a11e-11ea-91ed-7a889134f4a9.gif"> <img width="250" src="https://user-images.githubusercontent.com/11213578/83176824-64c5d900-a11e-11ea-9c11-8eae59c48cb5.gif">
 
 The last tool ("Add points of inflection") adds points of inflection (FontForge can natively display them but not natively add them):
 
@@ -62,7 +58,7 @@ If you are working with quadratic bezier splines the tools "Tunnify (balance)", 
 
 The "Harmonize" tool uses a similar algorithm as for cubic Bézier splines (see the [documention of the formulae](https://github.com/linusromer/curvatura/blob/master/curvatura-doc.pdf)). As it is a iterated algorithm, results may change slightly if applied two times.
 
-<img width="400" src="https://user-images.githubusercontent.com/11213578/83176822-642d4280-a11e-11ea-9b11-f8225ac24a37.gif">
+<img width="300" src="https://user-images.githubusercontent.com/11213578/83176822-642d4280-a11e-11ea-9b11-f8225ac24a37.gif">
 
 ## Comparison To harmonize-tunnify-inflection.py
 * Due to a bug, earlier versions of FontForge could not use `fontforge.point.type`. Therefore, I have written a workaround in `harmonize-tunnify-inflection.py`. The workaround is way slower than just checking `fontforge.point.type`. `Curvatura.py` now uses the faster `fontforge.point.type`.
