@@ -36,7 +36,7 @@ they have been added here for documentation reasons):
 
 <img width="800" alt="curvatura tools for cubic beziers" src="https://user-images.githubusercontent.com/11213578/74227914-bb1e2180-4cbf-11ea-89c1-a70aabf6be2f.png">
 
-Note that "Harmonize" moves the node between its handles, whereas "Make G3 continuous" scales the handles (see the [documention of the formulae](https://github.com/linusromer/curvatura/blob/master/curvatura-doc.pdf)). To put it bluntly, "Harmonize" can be applied thoughtless in many cases, but "Make G3 continuous" may have unexpected results and therefore should be applied carefully.
+Note that "Harmonize" moves the node between its handles, whereas "Harmonize handles" scales the handles (see the [documention of the formulae](https://github.com/linusromer/curvatura/blob/master/curvatura-doc.pdf)). 
 
 "Tunnify (balance)" moves the handles of a cubic Bézier segment such that the line between the handles is parallel to the line between the nodes. This tool is advantageous if you are working with several masters, as it makes them more consistent.
 
@@ -48,7 +48,7 @@ The last tool ("Add points of inflection") adds points of inflection (FontForge 
 
 ### Curvatura Tools For Quadratic Bezier Splines
 If you are working with quadratic bezier splines the tools "Tunnify (balance)", "Add points of inflection" will have no effect, because quadratic bezier splines are already tunnified and point of inflections may only occur at the nodes of the splines. 
-"Make G3 continuous" does not have a meaning for quadratic Bézier splines and therefore do not affect paths, neither. 
+"Harmonize handles" does not have a meaning for quadratic Bézier splines and therefore do not affect paths, neither. 
 
 The "Harmonize" tool uses a similar algorithm as for cubic Bézier splines (see the [documention of the formulae](https://github.com/linusromer/curvatura/blob/master/curvatura-doc.pdf)). As it is a iterated algorithm, results may change slightly if applied two times.
 
@@ -58,7 +58,7 @@ The "Harmonize" tool uses a similar algorithm as for cubic Bézier splines (see 
 * Some computations in `Curvatura.py` have been optimized in comparison to `harmonize-tunnify-inflection.py` (e.g. square roots are less frequently)
 * The design of `Curvatura.py` allows the use as a FontForge plugin, as a python class and as a command line program. `harmonize-tunnify-inflection.py` only served as a FontForge plugin.
 * `harmonize-tunnify-inflection.py` had no sub menu. The menu entries of `Curvatura.py` are contained in a sub menu called "Curvatura". This makes the tools easier distinctable from tools of other suppliers. 
-* `Curvatura.py` implements the additional method "Make G3 continuous".
+* `Curvatura.py` implements the additional method "Harmonize handles".
 
 ## Use `Curvatura.py` In Command Line
 You can use `Curvatura.py` in the command line. It will harmonize all glyhps in a font and needs exactely 2 arguments:

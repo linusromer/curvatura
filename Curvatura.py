@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Curvatura version 20201102
+# Curvatura version 20200528
 
 # This is a FontForge plug-in to harmonize or tunnify 
 # or add inflection points to the selected parts.
@@ -27,7 +27,7 @@
 
 # Copyright 2019-2020 by Linus Romer
 
-import fontforge,psMat,math
+import fontforge,math
 
 class Curvatura:
 		
@@ -50,6 +50,94 @@ class Curvatura:
 			return e-a,f-b
 		else: # generic case
 			return c-a,d-b
+			
+	# Returns for a cubic bezier path (a,b), (c,d), (e,f), (g,h)
+	# the curvature at (a,b). 
+	@staticmethod
+	def curvature_at_start(a,b,c,d,e,f,g,h):
+		if b == d and a == c:
+			return 0
+		return 2./3.*(c*f-a*f-d*e+b*e+a*d-b*c)/((b-d)**2+(a-c)**2)**1.5
+	
+	# Returns for a cubic bezier path from (0,0) to (1,0) with
+	# enclosing angles alpha and beta with the x-axis and 
+	# handle lengths a and b
+	# the maximal absolute curvature (numerical approximation). 	
+	@staticmethod
+	def max_curvature(alpha,beta,a,b):
+		maximum = 0
+		sa = math.sin(alpha)
+		sb = math.sin(beta)
+		ca = math.cos(alpha)
+		cb = math.cos(beta)
+		for i in range(0,51):
+			t = i/50.
+			fxx = 3*b*cb*t**2+3*a*ca*t**2-2*t**2-2*b*cb*t-4*a*ca*t+2*t+a*ca
+			fyy = -3*b*sb*t**2+3*a*sa*t**2+2*b*sb*t-4*a*sa*t+a*sa
+			fxxx = 3*b*cb*t+3*a*ca*t-2*t-b*cb-2*a*ca+1
+			fyyy = -3*b*sb*t+3*a*sa*t+b*sb-2*a*sa
+			if not (fxx == 0 and fyy == 0):
+				curv = 2*(fxx*fyyy-fxxx*fyy)/(fxx**2+fyy**2)**1.5
+				if abs(curv) > maximum:
+					maximum = abs(curv)
+		return maximum
+	
+	# Returns the coefficients of the polynomial with the 
+	# coefficients coeffs. (The polynomial a*x^2+b*x+c is represented by 
+	# the coefficients [a,b,c].)
+	@staticmethod
+	def derive(coeffs):
+		n = len(coeffs)
+		derivative = []
+		for i in range(0,n-1):
+			derivative.append(coeffs[i]*(n-i-1))
+		return derivative
+
+	# Divides the polynomial with the coefficients by (x-r) where r is a
+	# root of the polynomial (no remainder, Horner)
+	@staticmethod
+	def polynomial_division(coeffs,r):
+		result = [coeffs[0]]
+		for i in range(1,len(coeffs)-1): # -1 because of no remainder
+			result.append(coeffs[i]+result[-1]*r)
+		return result
+
+	# Evaluates a polynomial with coefficients coeffs in x with (Horner)
+	@staticmethod
+	def evaluate(coeffs,x):
+		result = coeffs[0]
+		for i in range(1,len(coeffs)):
+			result = result*x+coeffs[i]
+		return result
+
+	# Newton's algorithm for determing a root of a polynomial with 
+	# coefficients coeffs (starting value 0)
+	@staticmethod
+	def newton_root(coeffs):
+		derivative = Curvatura.derive(coeffs)
+		x = 0
+		for i in range(100):
+			if Curvatura.evaluate(derivative,x) == 0:
+				x += 1e-9
+			d = Curvatura.evaluate(coeffs,x)/Curvatura.evaluate(derivative,x)
+			x -= d
+			if abs(d) < 1e-9:
+				return x
+		return None # algorithm did not converge
+
+	# Same as newton_root() but returns ALL real roots
+	def newton_roots(coeffs):
+		f = coeffs
+		while f[0] == 0:
+			f.remove(0)
+		roots = []
+		while len(f) > 1:
+			r = Curvatura.newton_root(f)
+			if r is None:
+				break
+			roots.append(r)
+			f = Curvatura.polynomial_division(f,r)
+		return roots
 	
 	# Splits a contour c after point number i and time 0 < t < 1
 	# such that the bezier segment c[i],c[i+1],c[i+2],c[i+3]
@@ -303,65 +391,149 @@ class Curvatura:
 				else:
 					i += 1						
 	
-	# Given two adjacent cubic bezier segment (a,b), (c,d), (e,f), (g,h)
-	# and (g,h) (i,j) (k,l) (m,n) this method will return newly
-	# calculated e,f,i,j sucht that the adjacent paths are
-	# g3continuous in (g,h) i.e. the curvature and the derivative of
-	# the curvature are the same. 
+	# Sets the lengths a and b of the handles of a cubic bezier path 
+	# from (0,0) to (1,0) enclosing angles alpha and beta with the x-axis
+	# such that the curvature at (0,0) becomes ka and the curvature at
+	# (1,0) becomes kb.
 	@staticmethod
-	def g3continuous_cubic(a,b,c,d,e,f,g,h,i,j,k,l,m,n):
-		# translate all points such that (g,h) maps to (0,0)
-		# and rotate all points around (0,0) such that maps to 0
-		# and i is positive:
-		ab = fontforge.point(a,b)
-		cd = fontforge.point(c,d)
-		kl = fontforge.point(k,l)
-		mn = fontforge.point(m,n)
-		dg,dh = Curvatura.direction_at_start(g,h,i,j,k,l,m,n)
-		transmatrix = psMat.compose(psMat.translate(-g,-h),psMat.rotate(-math.atan2(dh,dg)))
-		mncopy = mn.dup()
-		if mncopy.transform(transmatrix).y < 0:
-			transmatrix = psMat.compose(transmatrix,psMat.scale(1,-1))
-		for p in [ab,cd,kl,mn]:
-			p.transform(transmatrix)
-		if cd.y*mn.y+18*cd.y*kl.y+ab.y*kl.y == 0 or cd.y*kl.y < 0:
-			return e, f, i, j # no changes
-		else: # generic case
-			coeff = 6./(cd.y*mn.y+18*cd.y*kl.y+ab.y*kl.y)
-			root = (cd.y*kl.y)**.5
-			ef = fontforge.point(cd.y*(cd.x*kl.y-kl.x*root)*coeff,0)
-			ij = fontforge.point(kl.y*(cd.y*kl.x-cd.x*root)*coeff,0)
-			invmatrix = psMat.inverse(transmatrix)
-			for p in [ef,ij]: # map back the coordinates
-				p.transform(invmatrix)
-			return ef.x, ef.y, ij.x, ij.y
+	def scale_handles(alpha,beta,ka,kb):
+		solutions = []
+		sa = math.sin(alpha)
+		if alpha + beta == 0:
+			solutions.append([(-2*sa/(3*ka))**.5,(2*sa/(3*kb))**.5])
+		else:
+			sb = math.sin(beta)
+			sba =math.sin(alpha+beta)
+			b_roots = Curvatura.newton_roots([27*ka*kb**2,0,36*ka*sb*kb,-8*sba**3,8*sa*sba**2+12*ka*sb**2])
+			for i in b_roots:
+				if i > 0:
+					a = (sb+1.5*kb*i**2)/sba
+					if a > 0:
+						solutions.append([a,i])
+		if len(solutions) == 0:
+			return None, None
+		elif len(solutions) == 1:
+			return solutions[0][0], solutions[0][1]
+		else: # we only take the solution with the smallest maximal absolute curvature
+			a, b = solutions[0][0], solutions[0][1]
+			maxcurv = Curvatura.max_curvature(alpha,beta,a,b)
+			for i in range(1,len(solutions)):
+				c = Curvatura.max_curvature(alpha,beta,solutions[i][0],solutions[i][1])
+				if c < maxcurv:
+					a, b = solutions[i][0], solutions[i][1]
+			return a, b
+			
+	# Assume (0,0) to be non-smooth node and therefore we can choose
+	# the curvature ka arbitrarily. This method calculates the handle
+	# lengths a and b such that the curvature kb is given in beta and
+	# the maximum of the curvature of the segment is minimal.
+	@staticmethod
+	def sharp_end_handles(alpha,beta,kb):
+		sa = math.sin(alpha)
+		sb = math.sin(beta)
+		sba =math.sin(alpha+beta)
+		minmaxcurv = math.inf
+		best_a = None
+		best_b = None
+		if alpha + beta == 0: # then b is fixed and a can be varyied independently of b
+			maxa = math.cos(alpha)
+			best_b = (2*sa/(3*kb))**.5
+			for i in range(0,51):
+				a = i/50*maxa
+				maxcurv = Curvatura.max_curvature(alpha,beta,a,best_b)
+				if maxcurv < minmaxcurv:
+					best_a = a
+					minmaxcurv = maxcurv
+		else:
+			maxa = sb/sba # sine theorem gives max length of a
+			maxb = sa/sba # sine theorem gives max length of b
+			for i in range(0,51):
+				b = i/50*maxb
+				a = (sb+1.5*kb*b**2)/sba
+				if 0 <= a <= maxa:
+					maxcurv = Curvatura.max_curvature(alpha,beta,a,b)
+					if maxcurv < minmaxcurv:
+						best_a, best_b = a, b
+						minmaxcurv = maxcurv
+		return best_a, best_b
+	
+	# Given a cubic bezier path (a,b), (c,d), (e,f), (g,h)
+	# and the curvatures ka and kg 
+	# we scale the handles (c,d) and (e,f) such that 
+	# the at curvatures ka and kg are reached at (a,b) and (g,h) resp.
+	@staticmethod
+	def adjust_handles(a,b,c,d,e,f,g,h,ka,kg):
+		l = ((g-a)**2+(h-b)**2)**.5 # this length will be scaled to 1 for curvature computations
+		da,db = Curvatura.direction_at_start(a,b,c,d,e,f,g,h)
+		dab = (da**2+db**2)**.5
+		da,db = da/dab,db/dab # norm length to 1
+		alpha = math.asin(((g-a)*db-(h-b)*da)/l) # crossp for direction
+		dg,dh = Curvatura.direction_at_start(g,h,e,f,c,d,a,b)
+		dgh = (dg**2+dh**2)**.5
+		dg,dh = dg/dgh,dh/dgh # norm length to 1
+		beta = math.asin(((g-a)*dh-(h-b)*dg)/l) # crossp for direction
+		if ka == math.inf: # this means we can choose ka
+			t,s = Curvatura.sharp_end_handles(alpha,beta,kg*l)
+		elif kg == math.inf: # this means we can choose kg
+			s,t = Curvatura.sharp_end_handles(beta,alpha,ka*l)
+		else:
+			t,s = Curvatura.scale_handles(alpha,beta,ka*l,kg*l) 
+		if t is None or s is None:
+			return c,d,e,f # no changes
+		else:
+			return a+t*da*l,b+t*db*l,g+s*dg*l,h+s*dh*l # scale back
 		
-	# Makes the nodes of a fontforge contour c G3 continuous.
-	# This algorithm is designed for a single selected smooth node.
-	# If more than 1 smooth node is chosen, the algorithm is applied
-	# to all of them, altough they depend on each other. 
-	# Sometimes the iteration of this process is stable, sometimes not.
+	# This harmonizes the selected paths by moving the handles in
+	# order to reach the average curvature at their nodes.
 	# The boolean is_glyph_variant is true iff the point selection
 	# in the UI does not matter.
 	@staticmethod
-	def g3continuous_contour(c,is_glyph_variant):
+	def harmonizehandles_contour(c,is_glyph_variant):
 		l = len(c)
-		for tentimes in range(10): # iterate 10 times
+		# collecting the average curvatures at the moment:
+		curvatures = {}
+		for fivetimes in range(5): # iterate 5 times to average everything out
 			for i in range(l): # going through the points c[i]
 				if Curvatura.segments_selected_cubic(c,i,is_glyph_variant):
-					c[(i-1)%l].x, c[(i-1)%l].y,\
-					c[(i+1)%l].x, c[(i+1)%l].y \
-					= Curvatura.g3continuous_cubic(c[(i-3)%l].x, 
-					c[(i-3)%l].y, c[(i-2)%l].x, c[(i-2)%l].y, 
-					c[(i-1)%l].x, c[(i-1)%l].y, c[i].x, c[i].y, 
-					c[(i+1)%l].x, c[(i+1)%l].y, c[(i+2)%l].x, 
-					c[(i+2)%l].y, c[(i+3)%l].x, c[(i+3)%l].y)			
-					i += 3 # makes things a little bit faster
-				else:
-					i += 1	
+					postcurvature = Curvatura.curvature_at_start(
+					c[i].x, c[i].y,	c[(i+1)%l].x, c[(i+1)%l].y, 
+					c[(i+2)%l].x, c[(i+2)%l].y, c[(i+3)%l].x, c[(i+3)%l].y)
+					precurvature = -Curvatura.curvature_at_start(
+					c[i].x, c[i].y, c[(i-1)%l].x, c[(i-1)%l].y,
+					c[(i-2)%l].x, c[(i-2)%l].y, c[(i-3)%l].x, c[(i-3)%l].y)
+					postnew = math.copysign(.5*(abs(postcurvature)+abs(precurvature)),postcurvature)
+					prenew = math.copysign(.5*(abs(postcurvature)+abs(precurvature)),precurvature)
+					curvatures[i] = [precurvature,postcurvature,prenew,postnew]
+			# adjust the handles to fit the average curvatures:
+			# (curvatures at selection ends have not been calculated yet)
+			for i in curvatures:
+				# looking on the previous segment
+				if (i-3)%l in curvatures:
+					ka = curvatures[(i-3)%l][3]
+				elif c[(i-3)%l].type == 0: # sharp end
+					ka = math.inf # this tricks adjust_handles() to use sharp_end_handles
+				else: # smooth end
+					ka = Curvatura.curvature_at_start(
+					c[(i-3)%l].x, c[(i-3)%l].y, c[(i-2)%l].x, c[(i-2)%l].y,
+					c[(i-1)%l].x, c[(i-1)%l].y, c[i].x, c[i].y)
+				c[(i-2)%l].x, c[(i-2)%l].y, c[(i-1)%l].x, c[(i-1)%l].y \
+				= Curvatura.adjust_handles(c[(i-3)%l].x, c[(i-3)%l].y, 
+				c[(i-2)%l].x, c[(i-2)%l].y,	c[(i-1)%l].x, c[(i-1)%l].y, 
+				c[i].x, c[i].y, ka, curvatures[i][2])
+				if not (i+3)%l in curvatures: # if we are at a selection end
+					if c[(i+3)%l].type == 0: # sharp end
+						kg = math.inf
+					else: # smooth end
+						kg = -Curvatura.curvature_at_start(
+						c[(i+3)%l].x, c[(i+3)%l].y, c[(i+2)%l].x, c[(i+2)%l].y,
+						c[(i+1)%l].x, c[(i+1)%l].y, c[i].x, c[i].y)
+					c[(i+1)%l].x, c[(i+1)%l].y, c[(i+2)%l].x, c[(i+2)%l].y \
+					= Curvatura.adjust_handles(c[i].x, c[i].y,
+					c[(i+1)%l].x, c[(i+1)%l].y, c[(i+2)%l].x, c[(i+2)%l].y, 
+					c[(i+3)%l].x, c[(i+3)%l].y, curvatures[i][3], kg)
 				
 	# This is the high level method for using the methods described before.
-	# The string action is either "harmonize", "g3continuous", 
+	# The string action is either "harmonize", "harmonizehandles", 
 	# "tunnify" or "inflection".
 	@staticmethod
 	def modify_contours(action,glyph):
@@ -379,8 +551,8 @@ class Curvatura:
 		for i in range(len(layer)): # going through the contours layer[i]
 			if action == "harmonize":
 				Curvatura.harmonize_contour(layer[i],is_glyph_variant)
-			elif action == "g3continuous":
-				Curvatura.g3continuous_contour(layer[i],is_glyph_variant)
+			elif action == "harmonizehandles":
+				Curvatura.harmonizehandles_contour(layer[i],is_glyph_variant)
 			elif action == "tunnify" and not layer[i].is_quadratic:
 				Curvatura.tunnify_contour(layer[i],is_glyph_variant)
 			elif action == "inflection" and not layer[i].is_quadratic:
@@ -388,7 +560,7 @@ class Curvatura:
 		glyph.layers[glyph.activeLayer] = layer
 		
 	# This is the high level method for using the methods described before.
-	# The string action is either "harmonize", "g3continuous", 
+	# The string action is either "harmonize", "harmonizehandles", 
 	# "tunnify" or "inflection".
 	@staticmethod
 	def modify_glyphs(action,font):
@@ -398,8 +570,8 @@ class Curvatura:
 			for i in range(len(layer)):
 				if action == "harmonize":
 					Curvatura.harmonize_contour(layer[i],True)
-				elif action == "g3continuous":
-					Curvatura.g3continuous_contour(layer[i],True)
+				elif action == "harmonizehandles":
+					Curvatura.harmonizehandles_contour(layer[i],True)
 				elif action == "tunnify" and not layer[i].is_quadratic:
 					Curvatura.tunnify_contour(layer[i],True)
 				elif action == "inflection" and not layer[i].is_quadratic:
@@ -422,8 +594,8 @@ if __name__ == '__main__':
 		Curvatura.are_glyphs_selected,"harmonize","Font",
 		None,"Curvatura","Harmonize");
 		fontforge.registerMenuItem(Curvatura.modify_glyphs,
-		Curvatura.are_glyphs_selected,"g3continuous","Font",
-		None,"Curvatura","Make G3 continuous");
+		Curvatura.are_glyphs_selected,"harmonizehandles","Font",
+		None,"Curvatura","Harmonize handles");
 		fontforge.registerMenuItem(Curvatura.modify_glyphs,
 		Curvatura.are_glyphs_selected,"tunnify","Font",
 		None,"Curvatura","Tunnify (balance)");
@@ -433,7 +605,7 @@ if __name__ == '__main__':
 		fontforge.registerMenuItem(Curvatura.modify_contours,None,
 		"harmonize","Glyph",None,"Curvatura","Harmonize");
 		fontforge.registerMenuItem(Curvatura.modify_contours,None,
-		"g3continuous","Glyph",None,"Curvatura","Make G3 continuous");
+		"harmonizehandles","Glyph",None,"Curvatura","Harmonize handles");
 		fontforge.registerMenuItem(Curvatura.modify_contours,None,
 		"tunnify","Glyph",None,"Curvatura","Tunnify (balance)");
 		fontforge.registerMenuItem(Curvatura.modify_contours,None,
