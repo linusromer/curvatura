@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Curvatura version 20200528
+# Curvatura version 20200612
 
 # This is a FontForge plug-in to harmonize or tunnify 
 # or add inflection points to the selected parts.
@@ -399,12 +399,15 @@ class Curvatura:
 	def scale_handles(alpha,beta,ka,kb):
 		solutions = []
 		sa = math.sin(alpha)
-		if alpha + beta == 0:
-			solutions.append([(-2*sa/(3*ka))**.5,(2*sa/(3*kb))**.5])
+		if alpha + beta == 0: # if ka, kb there is no solution (take the best available)
+			solutions.append(
+			[math.cos(alpha) if ka == 0 else (-2*sa/(3*ka))**.5 ,
+			math.cos(beta) if kb == 0 else (2*sa/(3*kb))**.5])
 		else:
 			sb = math.sin(beta)
-			sba =math.sin(alpha+beta)
-			b_roots = Curvatura.newton_roots([27*ka*kb**2,0,36*ka*sb*kb,-8*sba**3,8*sa*sba**2+12*ka*sb**2])
+			sba = math.sin(alpha+beta)
+			b_roots = Curvatura.newton_roots([27*ka*kb**2,0,36*ka*sb*kb,
+			-8*sba**3,8*sa*sba**2+12*ka*sb**2])
 			for i in b_roots:
 				if i > 0:
 					a = (sb+1.5*kb*i**2)/sba
@@ -414,49 +417,16 @@ class Curvatura:
 			return None, None
 		elif len(solutions) == 1:
 			return solutions[0][0], solutions[0][1]
-		else: # we only take the solution with the smallest maximal absolute curvature
+		else: # we only take the solution with the smallest max. abs. curvature
 			a, b = solutions[0][0], solutions[0][1]
 			maxcurv = Curvatura.max_curvature(alpha,beta,a,b)
 			for i in range(1,len(solutions)):
-				c = Curvatura.max_curvature(alpha,beta,solutions[i][0],solutions[i][1])
+				c = Curvatura.max_curvature(alpha,beta,
+				solutions[i][0],solutions[i][1])
 				if c < maxcurv:
 					a, b = solutions[i][0], solutions[i][1]
 			return a, b
 			
-	# Assume (0,0) to be non-smooth node and therefore we can choose
-	# the curvature ka arbitrarily. This method calculates the handle
-	# lengths a and b such that the curvature kb is given in beta and
-	# the maximum of the curvature of the segment is minimal.
-	@staticmethod
-	def sharp_end_handles(alpha,beta,kb):
-		sa = math.sin(alpha)
-		sb = math.sin(beta)
-		sba =math.sin(alpha+beta)
-		minmaxcurv = math.inf
-		best_a = None
-		best_b = None
-		if alpha + beta == 0: # then b is fixed and a can be varyied independently of b
-			maxa = math.cos(alpha)
-			best_b = (2*sa/(3*kb))**.5
-			for i in range(0,51):
-				a = i/50*maxa
-				maxcurv = Curvatura.max_curvature(alpha,beta,a,best_b)
-				if maxcurv < minmaxcurv:
-					best_a = a
-					minmaxcurv = maxcurv
-		else:
-			maxa = sb/sba # sine theorem gives max length of a
-			maxb = sa/sba # sine theorem gives max length of b
-			for i in range(0,51):
-				b = i/50*maxb
-				a = (sb+1.5*kb*b**2)/sba
-				if 0 <= a <= maxa:
-					maxcurv = Curvatura.max_curvature(alpha,beta,a,b)
-					if maxcurv < minmaxcurv:
-						best_a, best_b = a, b
-						minmaxcurv = maxcurv
-		return best_a, best_b
-	
 	# Given a cubic bezier path (a,b), (c,d), (e,f), (g,h)
 	# and the curvatures ka and kg 
 	# we scale the handles (c,d) and (e,f) such that 
@@ -465,19 +435,18 @@ class Curvatura:
 	def adjust_handles(a,b,c,d,e,f,g,h,ka,kg):
 		l = ((g-a)**2+(h-b)**2)**.5 # this length will be scaled to 1 for curvature computations
 		da,db = Curvatura.direction_at_start(a,b,c,d,e,f,g,h)
-		dab = (da**2+db**2)**.5
+		dab = (da**2+db**2)**.5 # this can cause dab = 0 (rounding...)
+		if dab == 0: 
+			dab = ((g-a)**2+(h-b)**2)**.5
 		da,db = da/dab,db/dab # norm length to 1
 		alpha = math.asin(((g-a)*db-(h-b)*da)/l) # crossp for direction
 		dg,dh = Curvatura.direction_at_start(g,h,e,f,c,d,a,b)
-		dgh = (dg**2+dh**2)**.5
+		dgh = (dg**2+dh**2)**.5 # this can cause dgh = 0 (rounding...)
+		if dgh == 0: 
+			dgh = ((g-a)**2+(h-b)**2)**.5
 		dg,dh = dg/dgh,dh/dgh # norm length to 1
 		beta = math.asin(((g-a)*dh-(h-b)*dg)/l) # crossp for direction
-		if ka == math.inf: # this means we can choose ka
-			t,s = Curvatura.sharp_end_handles(alpha,beta,kg*l)
-		elif kg == math.inf: # this means we can choose kg
-			s,t = Curvatura.sharp_end_handles(beta,alpha,ka*l)
-		else:
-			t,s = Curvatura.scale_handles(alpha,beta,ka*l,kg*l) 
+		t,s = Curvatura.scale_handles(alpha,beta,ka*l,kg*l) 
 		if t is None or s is None:
 			return c,d,e,f # no changes
 		else:
@@ -501,8 +470,14 @@ class Curvatura:
 					precurvature = -Curvatura.curvature_at_start(
 					c[i].x, c[i].y, c[(i-1)%l].x, c[(i-1)%l].y,
 					c[(i-2)%l].x, c[(i-2)%l].y, c[(i-3)%l].x, c[(i-3)%l].y)
-					postnew = math.copysign(.5*(abs(postcurvature)+abs(precurvature)),postcurvature)
-					prenew = math.copysign(.5*(abs(postcurvature)+abs(precurvature)),precurvature)
+					if postcurvature*precurvature < 0: # inflection node
+						postnew = 0
+						prenew = 0
+					else:
+						postnew = math.copysign(.5*(abs(postcurvature) \
+						+ abs(precurvature)),postcurvature)
+						prenew = math.copysign(.5*(abs(postcurvature) \
+						+ abs(precurvature)),precurvature)
 					curvatures[i] = [precurvature,postcurvature,prenew,postnew]
 			# adjust the handles to fit the average curvatures:
 			# (curvatures at selection ends have not been calculated yet)
@@ -510,9 +485,7 @@ class Curvatura:
 				# looking on the previous segment
 				if (i-3)%l in curvatures:
 					ka = curvatures[(i-3)%l][3]
-				elif c[(i-3)%l].type == 0: # sharp end
-					ka = math.inf # this tricks adjust_handles() to use sharp_end_handles
-				else: # smooth end
+				else: 
 					ka = Curvatura.curvature_at_start(
 					c[(i-3)%l].x, c[(i-3)%l].y, c[(i-2)%l].x, c[(i-2)%l].y,
 					c[(i-1)%l].x, c[(i-1)%l].y, c[i].x, c[i].y)
@@ -521,12 +494,9 @@ class Curvatura:
 				c[(i-2)%l].x, c[(i-2)%l].y,	c[(i-1)%l].x, c[(i-1)%l].y, 
 				c[i].x, c[i].y, ka, curvatures[i][2])
 				if not (i+3)%l in curvatures: # if we are at a selection end
-					if c[(i+3)%l].type == 0: # sharp end
-						kg = math.inf
-					else: # smooth end
-						kg = -Curvatura.curvature_at_start(
-						c[(i+3)%l].x, c[(i+3)%l].y, c[(i+2)%l].x, c[(i+2)%l].y,
-						c[(i+1)%l].x, c[(i+1)%l].y, c[i].x, c[i].y)
+					kg = -Curvatura.curvature_at_start(
+					c[(i+3)%l].x, c[(i+3)%l].y, c[(i+2)%l].x, c[(i+2)%l].y,
+					c[(i+1)%l].x, c[(i+1)%l].y, c[i].x, c[i].y)
 					c[(i+1)%l].x, c[(i+1)%l].y, c[(i+2)%l].x, c[(i+2)%l].y \
 					= Curvatura.adjust_handles(c[i].x, c[i].y,
 					c[(i+1)%l].x, c[(i+1)%l].y, c[(i+2)%l].x, c[(i+2)%l].y, 
