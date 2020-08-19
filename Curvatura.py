@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Curvatura version 20200612
+# Curvatura version 20200819
 
 # This is a FontForge plug-in to harmonize or tunnify 
 # or add inflection points to the selected parts.
@@ -61,26 +61,10 @@ class Curvatura:
 	
 	# Returns for a cubic bezier path from (0,0) to (1,0) with
 	# enclosing angles alpha and beta with the x-axis and 
-	# handle lengths a and b
-	# the maximal absolute curvature (numerical approximation). 	
+	# handle lengths a and b the jerk energy divided by 9*36. 
 	@staticmethod
-	def max_curvature(alpha,beta,a,b):
-		maximum = 0
-		sa = math.sin(alpha)
-		sb = math.sin(beta)
-		ca = math.cos(alpha)
-		cb = math.cos(beta)
-		for i in range(0,51):
-			t = i/50.
-			fxx = 3*b*cb*t**2+3*a*ca*t**2-2*t**2-2*b*cb*t-4*a*ca*t+2*t+a*ca
-			fyy = -3*b*sb*t**2+3*a*sa*t**2+2*b*sb*t-4*a*sa*t+a*sa
-			fxxx = 3*b*cb*t+3*a*ca*t-2*t-b*cb-2*a*ca+1
-			fyyy = -3*b*sb*t+3*a*sa*t+b*sb-2*a*sa
-			if not (fxx == 0 and fyy == 0):
-				curv = 2*(fxx*fyyy-fxxx*fyy)/(fxx**2+fyy**2)**1.5
-				if abs(curv) > maximum:
-					maximum = abs(curv)
-		return maximum
+	def jerk_energy(alpha,beta,a,b):
+		return (a*math.cos(alpha)-(1-b*math.cos(beta))+1/3)**2+(a*math.sin(alpha)-b*math.sin(beta))**2
 	
 	# Returns the coefficients of the polynomial with the 
 	# coefficients coeffs. (The polynomial a*x^2+b*x+c is represented by 
@@ -417,16 +401,18 @@ class Curvatura:
 			return None, None
 		elif len(solutions) == 1:
 			return solutions[0][0], solutions[0][1]
-		else: # we only take the solution with the smallest max. abs. curvature
+		else: # we only take the solution with the smallest jerk energy 
+			# which is proportional to ||-P0+3P1-3P2+P3||
 			a, b = solutions[0][0], solutions[0][1]
-			maxcurv = Curvatura.max_curvature(alpha,beta,a,b)
+			energy = Curvatura.jerk_energy(alpha,beta,a,b)
 			for i in range(1,len(solutions)):
-				c = Curvatura.max_curvature(alpha,beta,
+				e = Curvatura.jerk_energy(alpha,beta,
 				solutions[i][0],solutions[i][1])
-				if c < maxcurv:
+				if e < energy:
 					a, b = solutions[i][0], solutions[i][1]
+					energy = e
 			return a, b
-			
+					
 	# Given a cubic bezier path (a,b), (c,d), (e,f), (g,h)
 	# and the curvatures ka and kg 
 	# we scale the handles (c,d) and (e,f) such that 
@@ -439,13 +425,25 @@ class Curvatura:
 		if dab == 0: 
 			dab = ((g-a)**2+(h-b)**2)**.5
 		da,db = da/dab,db/dab # norm length to 1
-		alpha = math.asin(((g-a)*db-(h-b)*da)/l) # crossp for direction
+		sinalpha = ((g-a)*db-(h-b)*da)/l
+		if sinalpha < -1:
+			alpha = -.5*math.pi
+		elif sinalpha > 1:
+			alpha = .5*math.pi
+		else:
+			alpha = math.asin(((g-a)*db-(h-b)*da)/l) # crossp for direction
 		dg,dh = Curvatura.direction_at_start(g,h,e,f,c,d,a,b)
 		dgh = (dg**2+dh**2)**.5 # this can cause dgh = 0 (rounding...)
 		if dgh == 0: 
 			dgh = ((g-a)**2+(h-b)**2)**.5
 		dg,dh = dg/dgh,dh/dgh # norm length to 1
-		beta = math.asin(((g-a)*dh-(h-b)*dg)/l) # crossp for direction
+		sinbeta = ((g-a)*dh-(h-b)*dg)/l
+		if sinbeta < -1:
+			beta = -.5*math.pi
+		elif sinbeta > 1:
+			beta = .5*math.pi
+		else:
+			beta = math.asin(((g-a)*dh-(h-b)*dg)/l) # crossp for direction
 		t,s = Curvatura.scale_handles(alpha,beta,ka*l,kg*l) 
 		if t is None or s is None:
 			return c,d,e,f # no changes
