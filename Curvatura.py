@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Curvatura version 20200819
+# Curvatura version 20200828
 
 # This is a FontForge plug-in to harmonize or tunnify 
 # or add inflection points to the selected parts.
@@ -58,13 +58,44 @@ class Curvatura:
 		if b == d and a == c:
 			return 0
 		return 2./3.*(c*f-a*f-d*e+b*e+a*d-b*c)/((b-d)**2+(a-c)**2)**1.5
-	
+		
 	# Returns for a cubic bezier path from (0,0) to (1,0) with
 	# enclosing angles alpha and beta with the x-axis and 
-	# handle lengths a and b the jerk energy divided by 9*36. 
+	# handle lengths a and b the energy with simpson's rule (10 divisions).
 	@staticmethod
-	def jerk_energy(alpha,beta,a,b):
-		return (a*math.cos(alpha)-(1-b*math.cos(beta))+1/3)**2+(a*math.sin(alpha)-b*math.sin(beta))**2
+	def energy(alpha,beta,a,b):
+		sa = math.sin(alpha)
+		sb = math.sin(beta)
+		ca = math.cos(alpha)
+		cb = math.cos(beta)
+		xx_2 = 3*b*cb+3*a*ca-2
+		xx_1 = -2*b*cb-4*a*ca+2
+		xx_0 = a*ca
+		yy_2 = -3*b*sb+3*a*sa
+		yy_1 = -4*a*sa+2*b*sb
+		yy_0 = a*sa
+		xxx_1 = 3*b*cb+3*a*ca-2
+		xxx_0 = -b*cb-2*a*ca+1
+		yyy_1 = -3*b*sb+3*a*sa
+		yyy_0 = b*sb-2*a*sa
+		integral = 0
+		curv_before = (18*xx_0*yyy_0-18*xxx_0*yy_0)**2/(9*xx_0**2+9*yy_0**2)**2.5
+		for tt in range(1,11):
+			t = tt/10
+			xx = 3*(xx_2*t**2+xx_1*t+xx_0)
+			yy = 3*(yy_2*t**2+yy_1*t+yy_0)
+			xxx = 6*(xxx_1*t+xxx_0)
+			yyy = 6*(yyy_1*t+yyy_0)
+			curv = (xx*yyy-xxx*yy)**2/(xx**2+yy**2)**2.5
+			t -= .05
+			xx = 3*(xx_2*t**2+xx_1*t+xx_0)
+			yy = 3*(yy_2*t**2+yy_1*t+yy_0)
+			xxx = 6*(xxx_1*t+xxx_0)
+			yyy = 6*(yyy_1*t+yyy_0)
+			curv_between = (xx*yyy-xxx*yy)**2/(xx**2+yy**2)**2.5
+			integral += .1/6*(curv_before+4*curv_between+curv)
+			curv_before = curv
+		return integral/10
 	
 	# Returns the coefficients of the polynomial with the 
 	# coefficients coeffs. (The polynomial a*x^2+b*x+c is represented by 
@@ -401,12 +432,11 @@ class Curvatura:
 			return None, None
 		elif len(solutions) == 1:
 			return solutions[0][0], solutions[0][1]
-		else: # we only take the solution with the smallest jerk energy 
-			# which is proportional to ||-P0+3P1-3P2+P3||
+		else: # we only take the solution with the smallest energy 
 			a, b = solutions[0][0], solutions[0][1]
-			energy = Curvatura.jerk_energy(alpha,beta,a,b)
+			energy = Curvatura.energy(alpha,beta,a,b)
 			for i in range(1,len(solutions)):
-				e = Curvatura.jerk_energy(alpha,beta,
+				e = Curvatura.energy(alpha,beta,
 				solutions[i][0],solutions[i][1])
 				if e < energy:
 					a, b = solutions[i][0], solutions[i][1]
