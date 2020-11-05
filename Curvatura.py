@@ -404,7 +404,7 @@ class Curvatura:
 					c[(i+2)%l].x, c[(i+2)%l].y, c[(i+3)%l].x, c[(i+3)%l].y)
 					i += 3 # makes things a little bit faster
 				else:
-					i += 1						
+					i += 1				
 	
 	# Sets the lengths a and b of the handles of a cubic bezier path 
 	# from (0,0) to (1,0) enclosing angles alpha and beta with the x-axis
