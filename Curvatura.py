@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Curvatura version 20200828
+# Curvatura version 20220105
 
 # This is a FontForge plug-in to harmonize or tunnify 
 # or add inflection points to the selected parts.
@@ -30,7 +30,7 @@
 import fontforge,math
 
 class Curvatura:
-		
+						
 	# Returns the signed distance of the point p from the line
 	# starting in q and going to r. The value is positive, iff
 	# p is right from the line.
@@ -141,6 +141,7 @@ class Curvatura:
 		return None # algorithm did not converge
 
 	# Same as newton_root() but returns ALL real roots
+	@staticmethod
 	def newton_roots(coeffs):
 		f = coeffs
 		while f[0] == 0:
@@ -319,12 +320,26 @@ class Curvatura:
 	# and (e,f)--(g,h) in order to reach the ideal stated by Eduardo Tunni.
 	@staticmethod
 	def tunnify(a,b,c,d,e,f,g,h):
-		u,v = Curvatura.corner_point(a,b,c,d,e,f,g,h)
-		if not u is None and not v is None:
-			t = .5*((((c-a)**2+(d-b)**2)/((u-a)**2+(v-b)**2))**.5\
-			+(((e-g)**2+(f-h)**2)/((u-g)**2+(v-h)**2))**.5)
-			return (1-t)*a+t*u,(1-t)*b+t*v,(1-t)*g+t*u,(1-t)*h+t*v
-		return c,d,e,f
+		l,alpha,beta,da,db,dg,dh = Curvatura.chord_angles(a,b,c,d,e,f,g,h) # too much computation...
+		aa = ((c-a)**2+(d-b)**2)**.5/l
+		bb = ((e-g)**2+(f-h)**2)**.5/l
+		if abs(alpha+beta)%math.pi < 0.001: # nearly parallel handles 
+			return a+.5*(aa+bb)/aa*(c-a),b+.5*(aa+bb)/aa*(d-b),g+.5*(aa+bb)/bb*(e-g),h+.5*(aa+bb)/bb*(f-h)		
+		if alpha < 0: # make alpha nonnegative
+			alpha = -alpha
+			beta = -beta
+		if beta < 0: # then tunnify makes no sense
+			return c,d,e,f 
+		aa = aa
+		bb = bb
+		asa = aa*math.sin(alpha)
+		bsb = bb*math.sin(beta)
+		ff = 2*(asa+bsb)-aa*bb*math.sin(alpha+beta) # ff = area*20/3
+		cotab = 1/math.tan(alpha) + 1/math.tan(beta)
+		hh = (2-(4-cotab*ff)**.5)/cotab # take the smaller solution as the larger could have loops
+		if hh < 0:
+			hh = (2+(4-cotab*ff)**.5)/cotab
+		return a+hh/asa*(c-a),b+hh/asa*(d-b),g+hh/bsb*(e-g),h+hh/bsb*(f-h)	
 
 	# Tunnifies the handles of a fontforge contour c.
 	# The boolean is_glyph_variant is true iff the point selection
@@ -414,7 +429,7 @@ class Curvatura:
 	def scale_handles(alpha,beta,ka,kb):
 		solutions = []
 		sa = math.sin(alpha)
-		if alpha + beta == 0: # if ka, kb there is no solution (take the best available)
+		if alpha + beta == 0: # if ka = kb = 0, there is no solution (take the best available)
 			solutions.append(
 			[math.cos(alpha) if ka == 0 else (-2*sa/(3*ka))**.5 ,
 			math.cos(beta) if kb == 0 else (2*sa/(3*kb))**.5])
@@ -423,11 +438,13 @@ class Curvatura:
 			sba = math.sin(alpha+beta)
 			b_roots = Curvatura.newton_roots([27*ka*kb**2,0,36*ka*sb*kb,
 			-8*sba**3,8*sa*sba**2+12*ka*sb**2])
+			print("alpha = ", alpha*57.3, "beta = ", beta*57.3, "ka = ", ka, "kb = ", kb, "roots = ", b_roots)
 			for i in b_roots:
 				if i > 0:
 					a = (sb+1.5*kb*i**2)/sba
 					if a > 0:
 						solutions.append([a,i])
+			print(solutions)
 		if len(solutions) == 0:
 			return None, None
 		elif len(solutions) == 1:
@@ -444,11 +461,12 @@ class Curvatura:
 			return a, b
 					
 	# Given a cubic bezier path (a,b), (c,d), (e,f), (g,h)
-	# and the curvatures ka and kg 
-	# we scale the handles (c,d) and (e,f) such that 
-	# the at curvatures ka and kg are reached at (a,b) and (g,h) resp.
+	# this function returns the length of the chord from (a,b)
+	# to (g,h), the signed angles at (a,b) abd (g,h) with regard
+	# to the chord and the normed directions (da,db) and (dg,dh)
+	# at (a,b) resp. (g,h)
 	@staticmethod
-	def adjust_handles(a,b,c,d,e,f,g,h,ka,kg):
+	def chord_angles(a,b,c,d,e,f,g,h):
 		l = ((g-a)**2+(h-b)**2)**.5 # this length will be scaled to 1 for curvature computations
 		da,db = Curvatura.direction_at_start(a,b,c,d,e,f,g,h)
 		dab = (da**2+db**2)**.5 # this can cause dab = 0 (rounding...)
@@ -474,7 +492,16 @@ class Curvatura:
 			beta = .5*math.pi
 		else:
 			beta = math.asin(((g-a)*dh-(h-b)*dg)/l) # crossp for direction
-		t,s = Curvatura.scale_handles(alpha,beta,ka*l,kg*l) 
+		return l, alpha, beta, da, db, dg, dh
+	
+	# Given a cubic bezier path (a,b), (c,d), (e,f), (g,h)
+	# and the curvatures ka and kg 
+	# we scale the handles (c,d) and (e,f) such that 
+	# the curvatures ka and kg are reached at (a,b) and (g,h) resp.
+	@staticmethod
+	def adjust_handles(a,b,c,d,e,f,g,h,ka,kg):
+		l,alpha,beta,da,db,dg,dh = Curvatura.chord_angles(a,b,c,d,e,f,g,h)
+		t,s = Curvatura.scale_handles(alpha,beta,ka*l,kg*l)
 		if t is None or s is None:
 			return c,d,e,f # no changes
 		else:
@@ -530,9 +557,48 @@ class Curvatura:
 					c[(i+1)%l].x, c[(i+1)%l].y, c[(i+2)%l].x, c[(i+2)%l].y, 
 					c[(i+3)%l].x, c[(i+3)%l].y, curvatures[i][3], kg)
 				
+	# For two adjoint cubic bezier curves (a,b) (c,d) (e,f) (g,h) 
+	# and (g,h) (i,j) (k,l) (m,n) this function returns o,p,q,r
+	# such that (a,b) (o,p) (q,r) (m,n) is a replacing single segment
+	# which keeps the curvatures and directions at (a,b) and (m,n).
+	@staticmethod
+	def softmerge(a,b,c,d,e,f,g,h,i,j,k,l,m,n):
+		kappa_ab = Curvatura.curvature_at_start(a,b,c,d,e,f,g,h)
+		kappa_mn = -Curvatura.curvature_at_start(m,n,k,l,i,j,g,h)
+		return Curvatura.adjust_handles(a,b,c,d,k,l,m,n,kappa_ab,kappa_mn)
+	
+	# this works only for one selected point
+	@staticmethod
+	def softmerge_contour_old(c,is_glyph_variant):
+		l = len(c)
+		for i in range(l): # going through the points c[i]
+			if Curvatura.segments_selected_cubic(c,i,is_glyph_variant):
+				cc,cd,ce,cf = Curvatura.softmerge(c[(i-3)%l].x,
+				c[(i-3)%l].y, c[(i-2)%l].x, c[(i-2)%l].y, c[(i-1)%l].x, 
+				c[(i-1)%l].y, c[i].x, c[i].y, c[(i+1)%l].x, c[(i+1)%l].y, 
+				c[(i+2)%l].x, c[(i+2)%l].y, c[(i+3)%l].x, c[(i+3)%l].y)
+				c.merge(i)
+				l = len(c)
+				c[(i-2)%l].x, c[(i-2)%l].y, c[(i-1)%l].x, c[(i-1)%l].y = cc,cd,ce,cf
+				break	
+				
+	@staticmethod
+	def softmerge_contour(c,is_glyph_variant):
+		l = len(c)
+		for i in range(l): # going through the points c[i]
+			if Curvatura.segments_selected_cubic(c,i,is_glyph_variant):
+				cc,cd,ce,cf = Curvatura.softmerge(c[(i-3)%l].x,
+				c[(i-3)%l].y, c[(i-2)%l].x, c[(i-2)%l].y, c[(i-1)%l].x, 
+				c[(i-1)%l].y, c[i].x, c[i].y, c[(i+1)%l].x, c[(i+1)%l].y, 
+				c[(i+2)%l].x, c[(i+2)%l].y, c[(i+3)%l].x, c[(i+3)%l].y)
+				c.merge(i)
+				l = len(c)
+				c[(i-2)%l].x, c[(i-2)%l].y, c[(i-1)%l].x, c[(i-1)%l].y = cc,cd,ce,cf
+				break	
+	
 	# This is the high level method for using the methods described before.
 	# The string action is either "harmonize", "harmonizehandles", 
-	# "tunnify" or "inflection".
+	# "tunnify", "inflection" or "softmerge".
 	@staticmethod
 	def modify_contours(action,glyph):
 		glyph.preserveLayerAsUndo()
@@ -555,6 +621,8 @@ class Curvatura:
 				Curvatura.tunnify_contour(layer[i],is_glyph_variant)
 			elif action == "inflection" and not layer[i].is_quadratic:
 				Curvatura.inflection_contour(layer[i],is_glyph_variant)	
+			elif action == "softmerge" and not layer[i].is_quadratic:
+				Curvatura.softmerge_contour(layer[i],is_glyph_variant)	
 		glyph.layers[glyph.activeLayer] = layer
 		
 	# This is the high level method for using the methods described before.
@@ -608,6 +676,8 @@ if __name__ == '__main__':
 		"tunnify","Glyph",None,"Curvatura","Tunnify (balance)");
 		fontforge.registerMenuItem(Curvatura.modify_contours,None,
 		"inflection","Glyph",None,"Curvatura","Add points of inflection");
+		fontforge.registerMenuItem(Curvatura.modify_contours,None,
+		"softmerge","Glyph",None,"Curvatura","Merge two adjacent curves softly");
 	else:
 		import sys
 		if len(sys.argv) < 3:
