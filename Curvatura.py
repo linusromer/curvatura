@@ -323,15 +323,15 @@ class Curvatura:
 		l,alpha,beta,da,db,dg,dh = Curvatura.chord_angles(a,b,c,d,e,f,g,h) # too much computation...
 		aa = ((c-a)**2+(d-b)**2)**.5/l
 		bb = ((e-g)**2+(f-h)**2)**.5/l
-		if abs(alpha+beta)%math.pi < 0.001: # nearly parallel handles 
+		if aa == 0 and bb == 0 or l == 0: # then tunnify makes no sense
+			return c,d,e,f 
+		if abs(alpha+beta)%math.pi == 0: 
 			return a+.5*(aa+bb)/aa*(c-a),b+.5*(aa+bb)/aa*(d-b),g+.5*(aa+bb)/bb*(e-g),h+.5*(aa+bb)/bb*(f-h)		
 		if alpha < 0: # make alpha nonnegative
 			alpha = -alpha
 			beta = -beta
-		if beta < 0: # then tunnify makes no sense
+		if beta <= 0 or alpha == 0: # then tunnify makes no sense
 			return c,d,e,f 
-		aa = aa
-		bb = bb
 		asa = aa*math.sin(alpha)
 		bsb = bb*math.sin(beta)
 		ff = 2*(asa+bsb)-aa*bb*math.sin(alpha+beta) # ff = area*20/3
@@ -339,7 +339,8 @@ class Curvatura:
 		hh = (2-(4-cotab*ff)**.5)/cotab # take the smaller solution as the larger could have loops
 		if hh < 0:
 			hh = (2+(4-cotab*ff)**.5)/cotab
-		return a+hh/asa*(c-a),b+hh/asa*(d-b),g+hh/bsb*(e-g),h+hh/bsb*(f-h)	
+		return a+hh/math.sin(alpha)*da*l,b+hh/math.sin(alpha)*db*l, \
+		g+hh/math.sin(beta)*dg*l,h+hh/math.sin(beta)*dh*l	
 
 	# Tunnifies the handles of a fontforge contour c.
 	# The boolean is_glyph_variant is true iff the point selection
