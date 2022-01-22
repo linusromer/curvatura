@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Curvatura version 20220105
+# Curvatura version 20220121
 
 # This is a FontForge plug-in to harmonize or tunnify 
 # or add inflection points to the selected parts.
@@ -336,9 +336,12 @@ class Curvatura:
 		bsb = bb*math.sin(beta)
 		ff = 2*(asa+bsb)-aa*bb*math.sin(alpha+beta) # ff = area*20/3
 		cotab = 1/math.tan(alpha) + 1/math.tan(beta)
-		hh = (2-(4-cotab*ff)**.5)/cotab # take the smaller solution as the larger could have loops
+		discriminant = 4-cotab*ff
+		if discriminant < 0: # then tunnify makes no sense
+			return c,d,e,f 
+		hh = (2-discriminant**.5)/cotab # take the smaller solution as the larger could have loops
 		if hh < 0:
-			hh = (2+(4-cotab*ff)**.5)/cotab
+			hh = (2+discriminant**.5)/cotab
 		return a+hh/math.sin(alpha)*da*l,b+hh/math.sin(alpha)*db*l, \
 		g+hh/math.sin(beta)*dg*l,h+hh/math.sin(beta)*dh*l	
 
